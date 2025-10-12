@@ -1,0 +1,21 @@
+# MEXC Multi-Source Trading System - Dependencies
+# Python 3.10+ required
+
+# Telegram
+telethon==1.41.2
+
+# Environment & Config
+python-dotenv==1.0.1
+
+# Exchange API
+ccxt==4.5.10
+
+# Data processing (updated for Python 3.14 compatibility)
+pandas>=2.2.3
+numpy>=1.26.4
+
+# Data Validation
+pydantic==2.12.0
+
+# Logging & Display
+rich==13.7.1
