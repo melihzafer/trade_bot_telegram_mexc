@@ -4,8 +4,11 @@ Listens to configured channels and saves raw messages to JSONL.
 """
 import asyncio
 import json
+import base64
+import os
 from pathlib import Path
 from telethon import TelegramClient, events
+from telethon.sessions import StringSession
 
 from utils.config import (
     TELEGRAM_API_ID,
@@ -32,8 +35,16 @@ async def run_collector():
         warn("No Telegram channels configured. Check TELEGRAM_CHANNELS in .env.")
         return
 
+    # Check for session string (for Railway deployment)
+    session_string = os.getenv("TELEGRAM_SESSION_STRING", "")
+    
     # Create Telethon client
-    client = TelegramClient("session", TELEGRAM_API_ID, TELEGRAM_API_HASH)
+    if session_string:
+        info("📱 Using session string from environment variable")
+        client = TelegramClient(StringSession(session_string), TELEGRAM_API_ID, TELEGRAM_API_HASH)
+    else:
+        info("📱 Using local session file")
+        client = TelegramClient("session", TELEGRAM_API_ID, TELEGRAM_API_HASH)
 
     try:
         # Start client with phone number
