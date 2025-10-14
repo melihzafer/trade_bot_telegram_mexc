@@ -22,6 +22,9 @@ from utils.logger import info, warn, error
 RAW_PATH = DATA_DIR / "signals_raw.jsonl"
 
 
+# Global lock for file writing (thread-safe)
+_file_lock = asyncio.Lock()
+
 async def run_collector():
     """
     Main collector function. Connects to Telegram and listens to configured channels.
@@ -88,9 +91,12 @@ async def run_collector():
 
                 msg = {"source": source, "ts": timestamp, "text": text}
 
-                async with asyncio.Lock():
-                    with open(RAW_PATH, "a", encoding="utf-8") as f:
+                # Thread-safe file writing with explicit flush
+                async with _file_lock:
+                    with open(RAW_PATH, "a", encoding="utf-8", buffering=1) as f:
                         f.write(json.dumps(msg, ensure_ascii=False) + "\n")
+                        f.flush()  # Force write to disk
+                        os.fsync(f.fileno())  # Ensure OS writes to disk
 
                 preview = text[:80].replace("\n", " ")
                 info(f"📩 RAW >> {source} | {timestamp} | {preview}...")
