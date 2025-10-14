@@ -92,14 +92,20 @@ async def run_collector():
                 msg = {"source": source, "ts": timestamp, "text": text}
 
                 # Thread-safe file writing with explicit flush
-                async with _file_lock:
-                    with open(RAW_PATH, "a", encoding="utf-8", buffering=1) as f:
-                        f.write(json.dumps(msg, ensure_ascii=False) + "\n")
-                        f.flush()  # Force write to disk
-                        os.fsync(f.fileno())  # Ensure OS writes to disk
-
-                preview = text[:80].replace("\n", " ")
-                info(f"📩 RAW >> {source} | {timestamp} | {preview}...")
+                try:
+                    async with _file_lock:
+                        # Ensure data directory exists
+                        RAW_PATH.parent.mkdir(parents=True, exist_ok=True)
+                        
+                        with open(RAW_PATH, "a", encoding="utf-8", buffering=1) as f:
+                            f.write(json.dumps(msg, ensure_ascii=False) + "\n")
+                            f.flush()  # Force write to disk
+                            os.fsync(f.fileno())  # Ensure OS writes to disk
+                    
+                    preview = text[:80].replace("\n", " ")
+                    info(f"📩 RAW >> {source} | {timestamp} | {preview}...")
+                except Exception as write_error:
+                    error(f"⚠️ File write failed: {write_error} | Path: {RAW_PATH}")
 
             except Exception as e:
                 error(f"⚠️ Collector write failed: {e}")
