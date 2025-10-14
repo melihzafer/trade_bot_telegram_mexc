@@ -51,33 +51,52 @@ async def run_collector():
         await client.start(phone=TELEGRAM_PHONE)
         info(f"✅ Connected to Telegram as {TELEGRAM_PHONE}")
 
-        # Register message handler for configured channels
-        @client.on(events.NewMessage(chats=TELEGRAM_CHANNELS))
+        # Resolve all channel entities first (handles both @username and -100... IDs)
+        info("🔍 Resolving channel entities...")
+        resolved_channels = []
+        for ch in TELEGRAM_CHANNELS:
+            try:
+                # Convert string numeric IDs to integers for Telethon
+                if isinstance(ch, str) and ch.lstrip('-').isdigit():
+                    ch = int(ch)
+                
+                entity = await client.get_entity(ch)
+                resolved_channels.append(entity)
+                channel_name = getattr(entity, "title", getattr(entity, "username", str(ch)))
+                info(f"   ✅ {channel_name} ({ch})")
+            except Exception as e:
+                warn(f"   ⚠️  Could not resolve channel {ch}: {e}")
+        
+        if not resolved_channels:
+            error("No channels could be resolved. Check TELEGRAM_CHANNELS in .env")
+            return
+        
+        info(f"📡 Successfully resolved {len(resolved_channels)}/{len(TELEGRAM_CHANNELS)} channels")
+
+        # Register message handler for resolved channels
+        @client.on(events.NewMessage(chats=resolved_channels))
         async def handle_new_message(event):
             """Handle incoming messages from monitored channels."""
             try:
-                # Extract message data
-                source = (
-                    event.chat.username
-                    if event.chat and hasattr(event.chat, "username")
-                    else str(event.chat_id)
-                )
+                chat = await event.get_chat() if event.chat is None else event.chat
+                source = getattr(chat, "username", None) or getattr(chat, "title", None) or str(event.chat_id)
                 timestamp = event.message.date.isoformat()
-                text = event.raw_text
+                text = event.raw_text or ""
 
-                # Create message object
+                if not text.strip():
+                    return  # Skip empty/non-text messages
+
                 msg = {"source": source, "ts": timestamp, "text": text}
 
-                # Append to JSONL file
-                with open(RAW_PATH, "a", encoding="utf-8") as f:
-                    f.write(json.dumps(msg, ensure_ascii=False) + "\n")
+                async with asyncio.Lock():
+                    with open(RAW_PATH, "a", encoding="utf-8") as f:
+                        f.write(json.dumps(msg, ensure_ascii=False) + "\n")
 
-                # Log receipt
                 preview = text[:80].replace("\n", " ")
                 info(f"📩 RAW >> {source} | {timestamp} | {preview}...")
 
             except Exception as e:
-                error(f"Error handling message: {e}")
+                error(f"⚠️ Collector write failed: {e}")
 
         info(f"👂 Listening to channels: {', '.join(TELEGRAM_CHANNELS)}")
         info(f"💾 Saving raw messages to: {RAW_PATH}")

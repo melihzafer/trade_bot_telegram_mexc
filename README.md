@@ -500,4 +500,175 @@ For issues or questions:
 
 ---
 
+## 🚀 Railway Deployment
+
+### Deploy Signal Collector to Cloud (24/7 Collection)
+
+**Railway** provides free hosting with PostgreSQL, perfect for running collector 24/7.
+
+#### 1️⃣ Prepare for Railway
+
+```bash
+# Commit latest changes
+git add .
+git commit -m "Add Flask API and email reporter"
+git push origin main
+```
+
+#### 2️⃣ Create Railway Project
+
+1. Go to [railway.app](https://railway.app)
+2. Click "New Project" → "Deploy from GitHub repo"
+3. Select `trade_bot_telegram_mexc`
+4. Railway will auto-detect and deploy
+
+#### 3️⃣ Configure Environment Variables
+
+Go to Railway → Variables → Add these:
+
+```env
+# Telegram API (required)
+TELEGRAM_API_ID=12345678
+TELEGRAM_API_HASH=your_api_hash_here
+TELEGRAM_PHONE=+1234567890
+TELEGRAM_SESSION_STRING=1BJWap1s...  # Get from: python export_session.py
+
+# Channels to monitor (11 channels: 7 public + 4 private)
+TELEGRAM_CHANNELS=@kriptotestmz,@kriptodelisi11,@kriptokampiislem,@kriptostarr,@kriptosimpsons,@deepwebkripto,@ProCrypto_Trading,-1002251019196,-1002001037199,-1002388163345,-1002263653702
+
+# MEXC API (for backtesting later)
+MEXC_API_KEY=mx0v...
+MEXC_API_SECRET=your_secret_here
+
+# Flask API (optional)
+PORT=8080
+FLASK_ENV=production
+
+# Email Reporter (optional - for daily reports)
+SMTP_EMAIL=your@gmail.com
+SMTP_PASSWORD=your_app_password  # Get from: https://myaccount.google.com/apppasswords
+REPORT_EMAIL=recipient@email.com  # Optional, defaults to SMTP_EMAIL
+```
+
+**🔐 Get TELEGRAM_SESSION_STRING:**
+```bash
+python export_session.py
+# Copy the output string to Railway
+```
+
+**🔐 Get Gmail App Password:**
+1. Go to: https://myaccount.google.com/apppasswords
+2. Select app: Mail
+3. Select device: Other (custom name)
+4. Copy 16-character password
+
+#### 4️⃣ Deploy Services
+
+Railway will run the `web` service (Flask API) automatically.
+
+To run collector separately:
+1. Railway → Settings → Service Variables
+2. Change Procfile command:
+   ```
+   web: python main.py --mode collector
+   ```
+
+**Or run both (recommended):**
+Create 2 services in Railway:
+- **Service 1** (API): `web: python api.py`
+- **Service 2** (Collector): `worker: python main.py --mode collector`
+
+#### 5️⃣ Access Your Dashboard
+
+Railway will provide a public URL like:
+```
+https://trade-bot-telegram-mexc-production.up.railway.app
+```
+
+**Dashboard Features:**
+- 📊 View total signals collected
+- 📡 See signals by channel
+- 🔥 Latest signal preview
+- 📥 Download raw signals (JSONL)
+- 📥 Download parsed signals (CSV)
+- 🔌 JSON API endpoint
+
+#### 6️⃣ Schedule Email Reports (Optional)
+
+Add Railway Cron Job:
+1. Railway → Settings → Cron Jobs
+2. Add schedule: `0 18 * * *` (daily at 6 PM)
+3. Command: `python email_reporter.py`
+
+This will email you signal reports every day!
+
+#### 7️⃣ Monitor Logs
+
+```bash
+# View Railway logs
+railway logs
+
+# Or use Railway dashboard → Deployments → Logs
+```
+
+#### 8️⃣ Download Collected Signals
+
+**Option A: Web Dashboard**
+- Visit your Railway URL
+- Click "Download Raw Signals"
+
+**Option B: Direct API**
+```bash
+curl https://your-app.railway.app/download/raw -o signals.jsonl
+```
+
+**Option C: Email Report**
+- Wait for scheduled email
+- Download attachment
+
+---
+
+### Railway Tips
+
+✅ **Free Tier Limits:**
+- 500 hours/month execution time
+- $5 credit/month
+- Perfect for signal collector!
+
+✅ **Keep Collector Running:**
+- Railway auto-restarts on crash
+- Logs saved automatically
+- No need to worry about downtime
+
+✅ **Update Code:**
+```bash
+git push origin main
+# Railway auto-deploys!
+```
+
+✅ **Check Health:**
+Visit: `https://your-app.railway.app/health`
+
+---
+
+## 📧 Email Reporter
+
+Get daily signal reports delivered to your inbox!
+
+```bash
+# Test locally
+python email_reporter.py
+
+# Schedule in Railway (see Railway section above)
+```
+
+**Email includes:**
+- Total signals collected
+- Breakdown by channel
+- Latest signal preview
+- Attached JSONL file
+- Attached CSV (if parsed)
+
+---
+
 **Built with ❤️ for safe crypto trading experimentation**
