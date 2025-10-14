@@ -24,6 +24,8 @@ print("This will use your existing session file or create a new one.\n")
 async def export():
     # Use existing session or create new
     async with TelegramClient("session", API_ID, API_HASH) as client:
+        # Auto-start with phone from .env (no interactive prompt)
+        await client.start(phone=lambda: PHONE)
         session_string = StringSession.save(client.session)
         
         print("✅ Session exported successfully!")

@@ -1,0 +1,1 @@
+railway run python -c "import sys; sys.stdout.buffer.write(open('data/signals_raw.jsonl', 'rb').read())" > signals_downloaded.jsonl
