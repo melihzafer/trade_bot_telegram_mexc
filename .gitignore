@@ -37,6 +37,7 @@ env/
 # Telegram session files
 *.session
 *.session-journal
+generate_session.py
 
 # Data files
 data/
