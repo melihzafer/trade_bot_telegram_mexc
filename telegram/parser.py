@@ -5,15 +5,19 @@ Uses regex patterns to identify BUY/SELL, ENTRY, TP, SL values.
 import re
 import json
 import csv
+import sys
 from pathlib import Path
 from datetime import datetime
 from typing import Optional, Dict, Any
+
+# Add project root to path
+sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from utils.config import DATA_DIR
 from utils.logger import info, warn
 
 RAW_PATH = DATA_DIR / "signals_raw.jsonl"
-PARSED_PATH = DATA_DIR / "signals_parsed.csv"
+PARSED_PATH = DATA_DIR / "signals_parsed.jsonl"  # Changed from CSV to JSONL
 
 # CSV fields
 FIELDS = ["source", "ts", "symbol", "side", "entry", "tp", "sl", "leverage", "note"]
@@ -66,14 +70,15 @@ def parse_message(raw_obj: Dict[str, Any]) -> Optional[Dict[str, Any]]:
     Tries multiple pattern matchers in order.
 
     Args:
-        raw_obj: Dict with keys 'source', 'ts', 'text'
+        raw_obj: Dict with keys 'channel_title' (or 'source'), 'timestamp' (or 'ts'), 'text'
 
     Returns:
         Parsed signal dict or None if no valid signal found
     """
     text = raw_obj.get("text", "")
-    source = raw_obj.get("source", "unknown")
-    ts = raw_obj.get("ts", datetime.utcnow().isoformat())
+    # Support both old format (source/ts) and new format (channel_title/timestamp)
+    source = raw_obj.get("channel_title") or raw_obj.get("source", "unknown")
+    ts = raw_obj.get("timestamp") or raw_obj.get("ts", datetime.utcnow().isoformat())
 
     # Try Pattern 3: SETUP format (most specific, check first)
     result = try_pattern_setup(text)
@@ -260,22 +265,66 @@ def finalize_signal(
     if not parsed.get("symbol") or not parsed.get("side"):
         return None
 
+    # CRITICAL: Reject signals without entry price (garbage signals)
+    if not parsed.get("entry"):
+        return None
+
+    symbol = parsed["symbol"]
+    
+    # Symbol quality filters
+    # 1. Minimum 3 chars before USDT (BTC✓, ETH✓, AS✗, THE✗)
+    if symbol.endswith("USDT"):
+        base = symbol[:-4]  # Remove USDT
+        if len(base) < 3:
+            return None
+    
+    # 2. Reject common English/Turkish words (blacklist)
+    BLACKLIST = {
+        "AND", "AS", "THE", "HOW", "FOR", "NO", "IN", "TO", "OF", "OR", "AT", "BY", "UP",
+        "IS", "IT", "BE", "ON", "AN", "DO", "IF", "MY", "SO", "GO", "ME", "WE", "HE", "SHE",
+        "BUT", "NOT", "CAN", "GET", "HAS", "HAD", "HER", "HIS", "ITS", "OUR", "OUT", "TWO",
+        "DAY", "NEW", "OLD", "TOP", "BIG", "BEST", "LAST", "NEXT", "YEAR", "MOST", "VERY",
+        "LIVE", "ONLY", "REAL", "SAFE", "FREE", "FULL", "EACH", "SUCH", "THEN", "THEM",
+        # Turkish common words
+        "VE", "BU", "BİR", "İLE", "DA", "DE", "MI", "KI", "NE", "YA", "KADAR", "GIBI",
+        "DAHA", "FAZLA", "SONRA", "SADECE", "HEMEN", "ŞİMDİ", "VEYA", "ANCAK", "ÇÜNKÜ",
+        # Invalid symbols detected via API diagnostic (30 garbage symbols)
+        "AERO", "ANOTHER", "ARTCOIN", "COIN", "CRO", "CROSS", "DOOD", "ENGU",
+        "ETHEREUM", "EXCHANGE", "GOING", "HFI", "HYPE", "KAMIKAZE", "LEM", "LEVERAGE",
+        "LOOKS", "MEMEFI", "MOODENG", "MPFUN", "ORDER", "PONKE", "POPCAT", "RTCOIN",
+        "SIGNAL", "SOLANA", "SWING", "TARGETS", "VINE", "ZORA"
+    }
+    
+    if symbol in BLACKLIST or symbol.replace("USDT", "") in BLACKLIST:
+        return None
+    
+    # 3. Known crypto prefixes (priority pass) - very loose check, just sanity
+    # If symbol starts with known prefix, more likely legitimate
+    KNOWN_PREFIXES = ["BTC", "ETH", "BNB", "SOL", "ADA", "DOT", "AVAX", "MATIC", "LINK", "UNI"]
+    has_known_prefix = any(symbol.startswith(prefix) for prefix in KNOWN_PREFIXES)
+    
+    # 4. If no known prefix, require USDT suffix (common for futures)
+    if not has_known_prefix and not symbol.endswith("USDT"):
+        return None
+
     return {
         "source": source,
-        "ts": ts,
+        "timestamp": ts,  # Changed from "ts" to "timestamp" for consistency
         "symbol": parsed["symbol"],
         "side": parsed["side"],
-        "entry": parsed.get("entry"),
+        "entry_min": parsed.get("entry"),  # Backtest engine expects entry_min/entry_max
+        "entry_max": parsed.get("entry"),  # Use same value if only one entry point
         "tp": parsed.get("tp"),
         "sl": parsed.get("sl"),
         "leverage": parsed.get("leverage"),
         "note": text[:200],  # Store snippet of original message
+        "is_complete": True,  # Mark as complete signal for backtest
     }
 
 
 def run_parser():
     """
-    Parse all raw messages and append new signals to CSV.
+    Parse all raw messages and append new signals to JSONL.
     Skips duplicates based on (timestamp, source) tuple.
     """
     if not RAW_PATH.exists():
@@ -285,25 +334,27 @@ def run_parser():
     # Track existing signals to avoid duplicates
     existing = set()
     if PARSED_PATH.exists():
-        with open(PARSED_PATH, "r", newline="", encoding="utf-8") as f:
-            reader = csv.DictReader(f)
-            for row in reader:
-                existing.add((row["ts"], row["source"]))
+        with open(PARSED_PATH, "r", encoding="utf-8") as f:
+            for line in f:
+                try:
+                    row = json.loads(line)
+                    ts_key = row.get("ts")
+                    src_key = row.get("source")
+                    existing.add((ts_key, src_key))
+                except json.JSONDecodeError:
+                    pass
 
     # Parse raw messages
     new_count = 0
-    with open(PARSED_PATH, "a", newline="", encoding="utf-8") as out_file:
-        writer = csv.DictWriter(out_file, fieldnames=FIELDS)
-
-        # Write header if file is empty
-        if out_file.tell() == 0:
-            writer.writeheader()
-
+    with open(PARSED_PATH, "a", encoding="utf-8") as out_file:
         with open(RAW_PATH, "r", encoding="utf-8") as in_file:
             for line in in_file:
                 try:
                     raw_obj = json.loads(line)
-                    key = (raw_obj.get("ts"), raw_obj.get("source"))
+                    # Support both old (source/ts) and new (channel_title/timestamp) formats
+                    ts_val = raw_obj.get("timestamp") or raw_obj.get("ts")
+                    src_val = raw_obj.get("channel_title") or raw_obj.get("source")
+                    key = (ts_val, src_val)
 
                     # Skip if already processed
                     if key in existing:
@@ -312,7 +363,7 @@ def run_parser():
                     # Parse message
                     parsed = parse_message(raw_obj)
                     if parsed:
-                        writer.writerow(parsed)
+                        out_file.write(json.dumps(parsed, ensure_ascii=False) + "\n")
                         existing.add(key)
                         new_count += 1
                         info(

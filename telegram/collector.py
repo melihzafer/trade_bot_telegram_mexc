@@ -38,20 +38,33 @@ async def run_collector():
         warn("No Telegram channels configured. Check TELEGRAM_CHANNELS in .env.")
         return
 
-    # Check for session string (for Railway deployment)
-    session_string = os.getenv("TELEGRAM_SESSION_STRING", "")
+    # # Check for session string (for Railway deployment)
+    # session_string = os.getenv("TELEGRAM_SESSION_STRING", "")
     
-    # Create Telethon client
-    if session_string:
-        info("📱 Using session string from environment variable")
-        client = TelegramClient(StringSession(session_string), TELEGRAM_API_ID, TELEGRAM_API_HASH)
-    else:
-        info("📱 Using local session file")
-        client = TelegramClient("session", TELEGRAM_API_ID, TELEGRAM_API_HASH)
+    # # Create Telethon client
+    # if session_string:
+    #     info("📱 Using session string from environment variable")
+    #     client = TelegramClient(StringSession(session_string), TELEGRAM_API_ID, TELEGRAM_API_HASH)
+    # else:
+    #     info("📱 Using local session file")
+    #     client = TelegramClient("session", TELEGRAM_API_ID, TELEGRAM_API_HASH)
 
+    # try:
+    #     # Start client with phone number
+    #     await client.start(phone=TELEGRAM_PHONE)
+      # Create Telethon client (no session - will ask for code each time)
+    info("📱 Creating fresh Telegram session (will ask for verification code)")
+    client = TelegramClient(StringSession(), TELEGRAM_API_ID, TELEGRAM_API_HASH)
+    
     try:
-        # Start client with phone number
-        await client.start(phone=TELEGRAM_PHONE)
+        # Connect to Telegram and authenticate with phone
+        phone = os.getenv("TELEGRAM_PHONE")
+        if not phone:
+            error("❌ TELEGRAM_PHONE not set in .env file")
+            return
+        
+        info(f"📞 Starting authentication with phone: {phone}")
+        await client.start(phone=phone)
         info(f"✅ Connected to Telegram as {TELEGRAM_PHONE}")
 
         # Resolve all channel entities first (handles both @username and -100... IDs)

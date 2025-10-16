@@ -3,6 +3,7 @@ Backtester - tests parsed signals against historical OHLCV data from MEXC.
 Determines WIN/LOSS/OPEN outcomes based on TP/SL hits.
 """
 import ccxt
+import json
 import pandas as pd
 from pathlib import Path
 from typing import Optional
@@ -11,8 +12,8 @@ from utils.config import DATA_DIR, DEFAULT_TIMEFRAME, MAX_CANDLES
 from utils.logger import info, warn, error
 from trading.models import Signal, BacktestResult
 
-PARSED_PATH = DATA_DIR / "signals_parsed.csv"
-RESULTS_PATH = DATA_DIR / "backtest_results.csv"
+PARSED_PATH = DATA_DIR / "signals_parsed.jsonl"  # Changed to JSONL
+RESULTS_PATH = DATA_DIR / "backtest_results.jsonl"  # Changed to JSONL
 
 
 def fetch_ohlcv(
@@ -126,8 +127,14 @@ def run_backtest():
 
     info(f"📈 Starting backtest from {PARSED_PATH}")
 
-    # Load parsed signals
-    df_signals = pd.read_csv(PARSED_PATH)
+    # Load parsed signals from JSONL
+    signals = []
+    with open(PARSED_PATH, 'r', encoding='utf-8') as f:
+        for line in f:
+            if line.strip():
+                signals.append(json.loads(line))
+    
+    df_signals = pd.DataFrame(signals)
     results = []
 
     for idx, row in df_signals.iterrows():
@@ -152,10 +159,12 @@ def run_backtest():
             error(f"Error backtesting signal {idx}: {e}")
             results.append({**row.to_dict(), "outcome": "ERROR", "error_msg": str(e)})
 
-    # Save results to CSV
+    # Save results to JSONL
+    with open(RESULTS_PATH, 'w', encoding='utf-8') as f:
+        for result in results:
+            f.write(json.dumps(result, ensure_ascii=False) + '\n')
+    
     df_results = pd.DataFrame(results)
-    df_results.to_csv(RESULTS_PATH, index=False)
-
     # Summary statistics
     win_count = len(df_results[df_results["outcome"] == "WIN"])
     loss_count = len(df_results[df_results["outcome"] == "LOSS"])

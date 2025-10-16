@@ -1,0 +1,2874 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Detaylı Backtest Raporu - 20251016_181700</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 50%, #7e22ce 100%);
+            padding: 20px;
+            color: #333;
+            line-height: 1.6;
+        }
+        
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 50px 40px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .header::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+            animation: pulse 4s ease-in-out infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); opacity: 0.5; }
+            50% { transform: scale(1.1); opacity: 0.8; }
+        }
+        
+        .header h1 {
+            font-size: 3em;
+            margin-bottom: 10px;
+            font-weight: 700;
+            position: relative;
+            z-index: 1;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        .header .subtitle {
+            font-size: 1.3em;
+            opacity: 0.95;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .header .date {
+            font-size: 1.1em;
+            margin-top: 10px;
+            opacity: 0.9;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            padding: 40px;
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        }
+        
+        .summary-card {
+            background: white;
+            border-radius: 15px;
+            padding: 30px 25px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+            border-left: 5px solid #667eea;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .summary-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+            transform: scaleX(0);
+            transition: transform 0.3s ease;
+        }
+        
+        .summary-card:hover {
+            transform: translateY(-8px) scale(1.02);
+            box-shadow: 0 12px 30px rgba(0,0,0,0.2);
+        }
+        
+        .summary-card:hover::before {
+            transform: scaleX(1);
+        }
+        
+        .summary-card.positive {
+            border-left-color: #10b981;
+        }
+        
+        .summary-card.negative {
+            border-left-color: #ef4444;
+        }
+        
+        .summary-card.neutral {
+            border-left-color: #f59e0b;
+        }
+        
+        .summary-card h3 {
+            color: #667eea;
+            font-size: 0.9em;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            margin-bottom: 15px;
+            font-weight: 600;
+        }
+        
+        .summary-card .value {
+            font-size: 2.8em;
+            font-weight: 700;
+            color: #1f2937;
+            margin-bottom: 8px;
+            line-height: 1;
+        }
+        
+        .summary-card .label {
+            color: #6b7280;
+            font-size: 0.95em;
+            font-weight: 500;
+        }
+        
+        .section {
+            padding: 50px 40px;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        
+        .section:last-child {
+            border-bottom: none;
+        }
+        
+        .section h2 {
+            font-size: 2em;
+            color: #1f2937;
+            margin-bottom: 30px;
+            padding-bottom: 15px;
+            border-bottom: 4px solid #667eea;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        .section h2::before {
+            content: '';
+            width: 8px;
+            height: 40px;
+            background: linear-gradient(180deg, #667eea, #764ba2);
+            border-radius: 4px;
+        }
+        
+        .channel-grid {
+            display: grid;
+            gap: 25px;
+            margin-top: 30px;
+        }
+        
+        .channel-card {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+            transition: all 0.3s ease;
+            border: 2px solid transparent;
+        }
+        
+        .channel-card:hover {
+            box-shadow: 0 8px 30px rgba(0,0,0,0.15);
+            border-color: #667eea;
+            transform: translateX(5px);
+        }
+        
+        .channel-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid #f3f4f6;
+        }
+        
+        .channel-name {
+            font-size: 1.5em;
+            font-weight: 700;
+            color: #1f2937;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .rank-badge {
+            background: linear-gradient(135deg, #fbbf24, #f59e0b);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 0.75em;
+            font-weight: 700;
+            box-shadow: 0 2px 8px rgba(245, 158, 11, 0.3);
+        }
+        
+        .rank-badge.gold {
+            background: linear-gradient(135deg, #fbbf24, #f59e0b);
+        }
+        
+        .rank-badge.silver {
+            background: linear-gradient(135deg, #e5e7eb, #9ca3af);
+        }
+        
+        .rank-badge.bronze {
+            background: linear-gradient(135deg, #fb923c, #ea580c);
+        }
+        
+        .channel-metrics {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+        
+        .metric {
+            background: linear-gradient(135deg, #f9fafb, #f3f4f6);
+            padding: 18px;
+            border-radius: 12px;
+            text-align: center;
+            border: 1px solid #e5e7eb;
+        }
+        
+        .metric-label {
+            font-size: 0.85em;
+            color: #6b7280;
+            margin-bottom: 8px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .metric-value {
+            font-size: 1.8em;
+            font-weight: 700;
+            color: #1f2937;
+        }
+        
+        .metric-value.positive {
+            color: #10b981;
+        }
+        
+        .metric-value.negative {
+            color: #ef4444;
+        }
+        
+        .progress-bar {
+            height: 12px;
+            background: #e5e7eb;
+            border-radius: 6px;
+            overflow: hidden;
+            margin-top: 15px;
+            position: relative;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #10b981, #059669);
+            border-radius: 6px;
+            transition: width 1s ease;
+            position: relative;
+        }
+        
+        .progress-fill::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+            animation: shimmer 2s infinite;
+        }
+        
+        @keyframes shimmer {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
+        }
+        
+        .chart-container {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            margin-top: 25px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+        }
+        
+        .bar-chart {
+            display: flex;
+            flex-direction: column;
+            gap: 18px;
+        }
+        
+        .bar-item {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        .bar-label {
+            min-width: 140px;
+            font-weight: 600;
+            color: #374151;
+            font-size: 0.95em;
+        }
+        
+        .bar-container {
+            flex: 1;
+            background: #f3f4f6;
+            border-radius: 8px;
+            height: 40px;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            padding-right: 15px;
+            color: white;
+            font-weight: 700;
+            font-size: 0.9em;
+            transition: width 1s ease;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .bar-fill.positive {
+            background: linear-gradient(90deg, #10b981, #059669);
+        }
+        
+        .bar-fill.negative {
+            background: linear-gradient(90deg, #ef4444, #dc2626);
+        }
+        
+        .signal-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+            gap: 20px;
+            margin-top: 30px;
+        }
+        
+        .signal-card {
+            background: white;
+            border-radius: 12px;
+            padding: 25px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+            border-left: 5px solid #667eea;
+            transition: all 0.3s ease;
+        }
+        
+        .signal-card:hover {
+            box-shadow: 0 6px 20px rgba(0,0,0,0.15);
+            transform: translateY(-3px);
+        }
+        
+        .signal-card.win {
+            border-left-color: #10b981;
+            background: linear-gradient(135deg, #ffffff, #f0fdf4);
+        }
+        
+        .signal-card.loss {
+            border-left-color: #ef4444;
+            background: linear-gradient(135deg, #ffffff, #fef2f2);
+        }
+        
+        .signal-card.open {
+            border-left-color: #f59e0b;
+            background: linear-gradient(135deg, #ffffff, #fffbeb);
+        }
+        
+        .signal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        
+        .signal-symbol {
+            font-size: 1.4em;
+            font-weight: 700;
+            color: #1f2937;
+        }
+        
+        .signal-badge {
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-weight: 700;
+            font-size: 0.85em;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .signal-badge.win {
+            background: #10b981;
+            color: white;
+        }
+        
+        .signal-badge.loss {
+            background: #ef4444;
+            color: white;
+        }
+        
+        .signal-badge.open {
+            background: #f59e0b;
+            color: white;
+        }
+        
+        .signal-details {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+        
+        .signal-detail {
+            background: rgba(0,0,0,0.02);
+            padding: 12px;
+            border-radius: 8px;
+            border: 1px solid rgba(0,0,0,0.05);
+        }
+        
+        .signal-detail-label {
+            font-size: 0.75em;
+            color: #6b7280;
+            margin-bottom: 5px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-weight: 600;
+        }
+        
+        .signal-detail-value {
+            font-weight: 700;
+            color: #1f2937;
+            font-size: 1.1em;
+        }
+        
+        .signal-pnl {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+            margin-top: 15px;
+            font-weight: 700;
+            font-size: 1.2em;
+        }
+        
+        .signal-pnl.positive {
+            background: linear-gradient(135deg, #10b981, #059669);
+        }
+        
+        .signal-pnl.negative {
+            background: linear-gradient(135deg, #ef4444, #dc2626);
+        }
+        
+        .signal-footer {
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid #e5e7eb;
+            font-size: 0.9em;
+            color: #6b7280;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .footer {
+            background: linear-gradient(135deg, #1f2937, #111827);
+            color: white;
+            padding: 40px;
+            text-align: center;
+        }
+        
+        .footer h3 {
+            font-size: 1.5em;
+            margin-bottom: 15px;
+            color: #f9fafb;
+        }
+        
+        .footer p {
+            margin: 8px 0;
+            opacity: 0.9;
+            font-size: 1.05em;
+        }
+        
+        .pie-chart {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin: 30px 0;
+        }
+        
+        .pie-chart svg {
+            max-width: 300px;
+            height: auto;
+        }
+        
+        @media (max-width: 1024px) {
+            .summary-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            
+            .signal-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 2em;
+            }
+            
+            .summary-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .channel-metrics {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📊 Detaylı Backtest Analiz Raporu</h1>
+            <div class="subtitle">Kanal Performans Analizi ve PnL Hesaplamaları</div>
+            <div class="date">16 October 2025, 18:17</div>
+        </div>
+        
+        <div class="summary-grid">
+            <div class="summary-card">
+                <h3>Toplam Sinyal</h3>
+                <div class="value">329</div>
+                <div class="label">Test edilen işlem</div>
+            </div>
+            
+            <div class="summary-card positive">
+                <h3>✅ Kazanan</h3>
+                <div class="value">136</div>
+                <div class="label">41.3% başarı</div>
+            </div>
+            
+            <div class="summary-card negative">
+                <h3>❌ Kaybeden</h3>
+                <div class="value">136</div>
+                <div class="label">41.3% kayıp</div>
+            </div>
+            
+            <div class="summary-card neutral">
+                <h3>⏳ Açık</h3>
+                <div class="value">51</div>
+                <div class="label">15.5% beklemede</div>
+            </div>
+            
+            <div class="summary-card positive">
+                <h3>📈 Win Rate</h3>
+                <div class="value">50.0%</div>
+                <div class="label">Kazanma oranı</div>
+            </div>
+            
+            <div class="summary-card positive">
+                <h3>💰 Toplam PnL</h3>
+                <div class="value">+25327.51%</div>
+                <div class="label">Kaldıraçlı kar/zarar</div>
+            </div>
+            
+            <div class="summary-card positive">
+                <h3>📊 Ortalama PnL</h3>
+                <div class="value">+76.98%</div>
+                <div class="label">İşlem başına</div>
+            </div>
+            
+            <div class="summary-card">
+                <h3>🎯 Risk/Reward</h3>
+                <div class="value">186.23</div>
+                <div class="label">Kazanç/kayıp oranı</div>
+            </div>
+        </div>
+        
+        <div class="section">
+            <h2>🏆 Kanal Performans Sıralaması</h2>
+            <p style="color: #6b7280; margin-bottom: 25px; font-size: 1.1em;">
+                Kanallar toplam PnL ve kazanma oranına göre sıralanmıştır. 
+                En başarılı kanallar listenin başında yer almaktadır.
+            </p>
+            <div class="channel-grid">
+
+                <div class="channel-card">
+                    <div class="channel-header">
+                        <div class="channel-name">
+                            Benz Crypto💵
+                        </div>
+                        <div class="rank-badge gold">🥇</div>
+                    </div>
+                    
+                    <div class="channel-metrics">
+                        <div class="metric">
+                            <div class="metric-label">Toplam Sinyal</div>
+                            <div class="metric-value">8</div>
+                        </div>
+                        
+                        <div class="metric">
+                            <div class="metric-label">Win Rate</div>
+                            <div class="metric-value positive">100.0%</div>
+                        </div>
+                        
+                        <div class="metric">
+                            <div class="metric-label">Toplam PnL</div>
+                            <div class="metric-value positive">+18949.68%</div>
+                        </div>
+                        
+                        <div class="metric">
+                            <div class="metric-label">Ort. PnL</div>
+                            <div class="metric-value positive">+2368.71%</div>
+                        </div>
+                        
+                        <div class="metric">
+                            <div class="metric-label">Kazanan</div>
+                            <div class="metric-value positive">5</div>
+                        </div>
+                        
+                        <div class="metric">
+                            <div class="metric-label">Kaybeden</div>
+                            <div class="metric-value negative">0</div>
+                        </div>
+                        
+                        <div class="metric">
+                            <div class="metric-label">Farklı Coin</div>
+                            <div class="metric-value">7</div>
+                        </div>
+                        
+                        <div class="metric">
+                            <div class="metric-label">Sharpe Ratio</div>
+                            <div class="metric-value positive">0.29</div>
+                        </div>
+                    </div>
+                    
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: 100.0%"></div>
+                    </div>
+                    
+                    <div style="margin-top: 15px; display: flex; justify-content: space-between; font-size: 0.9em; color: #6b7280;">
+                        <span>LONG: 5 | SHORT: 3</span>
+                        <span>Açık: 3 | Hata: 0</span>
+                    </div>
+                </div>
+
+                <div class="channel-card">
+                    <div class="channel-header">
+                        <div class="channel-name">
+                            KRİPTO KAMPI - ÜCRETSİZ İŞLEM"
+                        </div>
+                        <div class="rank-badge silver">🥈</div>
+                    </div>
+                    
+                    <div class="channel-metrics">
+                        <div class="metric">
+                            <div class="metric-label">Toplam Sinyal</div>
+                            <div class="metric-value">100</div>
+                        </div>
+                        
+                        <div class="metric">
+                            <div class="metric-label">Win Rate</div>
+                            <div class="metric-value negative">46.9%</div>
+                        </div>
+                        
+                        <div class="metric">
+                            <div class="metric-label">Toplam PnL</div>
+                            <div class="metric-value positive">+7186.59%</div>
+                        </div>
+                        
+                        <div class="metric">
+                            <div class="metric-label">Ort. PnL</div>
+                            <div class="metric-value positive">+71.87%</div>
+                        </div>
+                        
+                        <div class="metric">
+                            <div class="metric-label">Kazanan</div>
+                            <div class="metric-value positive">46</div>
+                        </div>
+                        
+                        <div class="metric">
+                            <div class="metric-label">Kaybeden</div>
+                            <div class="metric-value negative">52</div>
+                        </div>
+                        
+                        <div class="metric">
+                            <div class="metric-label">Farklı Coin</div>
+                            <div class="metric-value">27</div>
+                        </div>
+                        
+                        <div class="metric">
+                            <div class="metric-label">Sharpe Ratio</div>
+                            <div class="metric-value positive">0.11</div>
+                        </div>
+                    </div>
+                    
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: 46.93877551020408%"></div>
+                    </div>
+                    
+                    <div style="margin-top: 15px; display: flex; justify-content: space-between; font-size: 0.9em; color: #6b7280;">
+                        <span>LONG: 92 | SHORT: 8</span>
+                        <span>Açık: 0 | Hata: 2</span>
+                    </div>
+                </div>
+
+                <div class="channel-card">
+                    <div class="channel-header">
+                        <div class="channel-name">
+                            KRİPTO KAMPI - ASLA PARA İSTEMEZ
+                        </div>
+                        <div class="rank-badge bronze">🥉</div>
+                    </div>
+                    
+                    <div class="channel-metrics">
+                        <div class="metric">
+                            <div class="metric-label">Toplam Sinyal</div>
+                            <div class="metric-value">42</div>
+                        </div>
+                        
+                        <div class="metric">
+                            <div class="metric-label">Win Rate</div>
+                            <div class="metric-value positive">80.5%</div>
+                        </div>
+                        
+                        <div class="metric">
+                            <div class="metric-label">Toplam PnL</div>
+                            <div class="metric-value positive">+991.70%</div>
+                        </div>
+                        
+                        <div class="metric">
+                            <div class="metric-label">Ort. PnL</div>
+                            <div class="metric-value positive">+23.61%</div>
+                        </div>
+                        
+                        <div class="metric">
+                            <div class="metric-label">Kazanan</div>
+                            <div class="metric-value positive">33</div>
+                        </div>
+                        
+                        <div class="metric">
+                            <div class="metric-label">Kaybeden</div>
+                            <div class="metric-value negative">8</div>
+                        </div>
+                        
+                        <div class="metric">
+                            <div class="metric-label">Farklı Coin</div>
+                            <div class="metric-value">17</div>
+                        </div>
+                        
+                        <div class="metric">
+                            <div class="metric-label">Sharpe Ratio</div>
+                            <div class="metric-value positive">0.79</div>
+                        </div>
+                    </div>
+                    
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: 80.48780487804879%"></div>
+                    </div>
+                    
+                    <div style="margin-top: 15px; display: flex; justify-content: space-between; font-size: 0.9em; color: #6b7280;">
+                        <span>LONG: 42 | SHORT: 0</span>
+                        <span>Açık: 0 | Hata: 1</span>
+                    </div>
+                </div>
+
+                <div class="channel-card">
+                    <div class="channel-header">
+                        <div class="channel-name">
+                            Kripto Simpsons
+                        </div>
+                        <div class="rank-badge ">#4</div>
+                    </div>
+                    
+                    <div class="channel-metrics">
+                        <div class="metric">
+                            <div class="metric-label">Toplam Sinyal</div>
+                            <div class="metric-value">6</div>
+                        </div>
+                        
+                        <div class="metric">
+                            <div class="metric-label">Win Rate</div>
+                            <div class="metric-value positive">83.3%</div>
+                        </div>
+                        
+                        <div class="metric">
+                            <div class="metric-label">Toplam PnL</div>
+                            <div class="metric-value positive">+250.09%</div>
+                        </div>
+                        
+                        <div class="metric">
+                            <div class="metric-label">Ort. PnL</div>
+                            <div class="metric-value positive">+41.68%</div>
+                        </div>
+                        
+                        <div class="metric">
+                            <div class="metric-label">Kazanan</div>
+                            <div class="metric-value positive">5</div>
+                        </div>
+                        
+                        <div class="metric">
+                            <div class="metric-label">Kaybeden</div>
+                            <div class="metric-value negative">1</div>
+                        </div>
+                        
+                        <div class="metric">
+                            <div class="metric-label">Farklı Coin</div>
+                            <div class="metric-value">5</div>
+                        </div>
+                        
+                        <div class="metric">
+                            <div class="metric-label">Sharpe Ratio</div>
+                            <div class="metric-value positive">1.14</div>
+                        </div>
+                    </div>
+                    
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: 83.33333333333334%"></div>
+                    </div>
+                    
+                    <div style="margin-top: 15px; display: flex; justify-content: space-between; font-size: 0.9em; color: #6b7280;">
+                        <span>LONG: 5 | SHORT: 1</span>
+                        <span>Açık: 0 | Hata: 0</span>
+                    </div>
+                </div>
+
+                <div class="channel-card">
+                    <div class="channel-header">
+                        <div class="channel-name">
+                            Crypto Devil® [ Private 🔒 ]
+                        </div>
+                        <div class="rank-badge ">#5</div>
+                    </div>
+                    
+                    <div class="channel-metrics">
+                        <div class="metric">
+                            <div class="metric-label">Toplam Sinyal</div>
+                            <div class="metric-value">1</div>
+                        </div>
+                        
+                        <div class="metric">
+                            <div class="metric-label">Win Rate</div>
+                            <div class="metric-value negative">0.0%</div>
+                        </div>
+                        
+                        <div class="metric">
+                            <div class="metric-label">Toplam PnL</div>
+                            <div class="metric-value negative">+0.00%</div>
+                        </div>
+                        
+                        <div class="metric">
+                            <div class="metric-label">Ort. PnL</div>
+                            <div class="metric-value negative">+0.00%</div>
+                        </div>
+                        
+                        <div class="metric">
+                            <div class="metric-label">Kazanan</div>
+                            <div class="metric-value positive">0</div>
+                        </div>
+                        
+                        <div class="metric">
+                            <div class="metric-label">Kaybeden</div>
+                            <div class="metric-value negative">0</div>
+                        </div>
+                        
+                        <div class="metric">
+                            <div class="metric-label">Farklı Coin</div>
+                            <div class="metric-value">1</div>
+                        </div>
+                        
+                        <div class="metric">
+                            <div class="metric-label">Sharpe Ratio</div>
+                            <div class="metric-value negative">0.00</div>
+                        </div>
+                    </div>
+                    
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: 0%"></div>
+                    </div>
+                    
+                    <div style="margin-top: 15px; display: flex; justify-content: space-between; font-size: 0.9em; color: #6b7280;">
+                        <span>LONG: 1 | SHORT: 0</span>
+                        <span>Açık: 1 | Hata: 0</span>
+                    </div>
+                </div>
+
+                <div class="channel-card">
+                    <div class="channel-header">
+                        <div class="channel-name">
+                            Crypto Inner Circle®
+                        </div>
+                        <div class="rank-badge ">#6</div>
+                    </div>
+                    
+                    <div class="channel-metrics">
+                        <div class="metric">
+                            <div class="metric-label">Toplam Sinyal</div>
+                            <div class="metric-value">6</div>
+                        </div>
+                        
+                        <div class="metric">
+                            <div class="metric-label">Win Rate</div>
+                            <div class="metric-value negative">0.0%</div>
+                        </div>
+                        
+                        <div class="metric">
+                            <div class="metric-label">Toplam PnL</div>
+                            <div class="metric-value negative">+0.00%</div>
+                        </div>
+                        
+                        <div class="metric">
+                            <div class="metric-label">Ort. PnL</div>
+                            <div class="metric-value negative">+0.00%</div>
+                        </div>
+                        
+                        <div class="metric">
+                            <div class="metric-label">Kazanan</div>
+                            <div class="metric-value positive">0</div>
+                        </div>
+                        
+                        <div class="metric">
+                            <div class="metric-label">Kaybeden</div>
+                            <div class="metric-value negative">0</div>
+                        </div>
+                        
+                        <div class="metric">
+                            <div class="metric-label">Farklı Coin</div>
+                            <div class="metric-value">5</div>
+                        </div>
+                        
+                        <div class="metric">
+                            <div class="metric-label">Sharpe Ratio</div>
+                            <div class="metric-value negative">0.00</div>
+                        </div>
+                    </div>
+                    
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: 0%"></div>
+                    </div>
+                    
+                    <div style="margin-top: 15px; display: flex; justify-content: space-between; font-size: 0.9em; color: #6b7280;">
+                        <span>LONG: 6 | SHORT: 0</span>
+                        <span>Açık: 6 | Hata: 0</span>
+                    </div>
+                </div>
+
+                <div class="channel-card">
+                    <div class="channel-header">
+                        <div class="channel-name">
+                            Deep Web Kripto
+                        </div>
+                        <div class="rank-badge ">#7</div>
+                    </div>
+                    
+                    <div class="channel-metrics">
+                        <div class="metric">
+                            <div class="metric-label">Toplam Sinyal</div>
+                            <div class="metric-value">1</div>
+                        </div>
+                        
+                        <div class="metric">
+                            <div class="metric-label">Win Rate</div>
+                            <div class="metric-value negative">0.0%</div>
+                        </div>
+                        
+                        <div class="metric">
+                            <div class="metric-label">Toplam PnL</div>
+                            <div class="metric-value negative">+0.00%</div>
+                        </div>
+                        
+                        <div class="metric">
+                            <div class="metric-label">Ort. PnL</div>
+                            <div class="metric-value negative">+0.00%</div>
+                        </div>
+                        
+                        <div class="metric">
+                            <div class="metric-label">Kazanan</div>
+                            <div class="metric-value positive">0</div>
+                        </div>
+                        
+                        <div class="metric">
+                            <div class="metric-label">Kaybeden</div>
+                            <div class="metric-value negative">0</div>
+                        </div>
+                        
+                        <div class="metric">
+                            <div class="metric-label">Farklı Coin</div>
+                            <div class="metric-value">1</div>
+                        </div>
+                        
+                        <div class="metric">
+                            <div class="metric-label">Sharpe Ratio</div>
+                            <div class="metric-value negative">0.00</div>
+                        </div>
+                    </div>
+                    
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: 0%"></div>
+                    </div>
+                    
+                    <div style="margin-top: 15px; display: flex; justify-content: space-between; font-size: 0.9em; color: #6b7280;">
+                        <span>LONG: 0 | SHORT: 1</span>
+                        <span>Açık: 1 | Hata: 0</span>
+                    </div>
+                </div>
+
+                <div class="channel-card">
+                    <div class="channel-header">
+                        <div class="channel-name">
+                            Fat Pig Signals ®
+                        </div>
+                        <div class="rank-badge ">#8</div>
+                    </div>
+                    
+                    <div class="channel-metrics">
+                        <div class="metric">
+                            <div class="metric-label">Toplam Sinyal</div>
+                            <div class="metric-value">3</div>
+                        </div>
+                        
+                        <div class="metric">
+                            <div class="metric-label">Win Rate</div>
+                            <div class="metric-value negative">0.0%</div>
+                        </div>
+                        
+                        <div class="metric">
+                            <div class="metric-label">Toplam PnL</div>
+                            <div class="metric-value negative">+0.00%</div>
+                        </div>
+                        
+                        <div class="metric">
+                            <div class="metric-label">Ort. PnL</div>
+                            <div class="metric-value negative">+0.00%</div>
+                        </div>
+                        
+                        <div class="metric">
+                            <div class="metric-label">Kazanan</div>
+                            <div class="metric-value positive">0</div>
+                        </div>
+                        
+                        <div class="metric">
+                            <div class="metric-label">Kaybeden</div>
+                            <div class="metric-value negative">0</div>
+                        </div>
+                        
+                        <div class="metric">
+                            <div class="metric-label">Farklı Coin</div>
+                            <div class="metric-value">3</div>
+                        </div>
+                        
+                        <div class="metric">
+                            <div class="metric-label">Sharpe Ratio</div>
+                            <div class="metric-value negative">0.00</div>
+                        </div>
+                    </div>
+                    
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: 0%"></div>
+                    </div>
+                    
+                    <div style="margin-top: 15px; display: flex; justify-content: space-between; font-size: 0.9em; color: #6b7280;">
+                        <span>LONG: 3 | SHORT: 0</span>
+                        <span>Açık: 3 | Hata: 0</span>
+                    </div>
+                </div>
+
+                <div class="channel-card">
+                    <div class="channel-header">
+                        <div class="channel-name">
+                            KRİPTO BUĞRA
+                        </div>
+                        <div class="rank-badge ">#9</div>
+                    </div>
+                    
+                    <div class="channel-metrics">
+                        <div class="metric">
+                            <div class="metric-label">Toplam Sinyal</div>
+                            <div class="metric-value">1</div>
+                        </div>
+                        
+                        <div class="metric">
+                            <div class="metric-label">Win Rate</div>
+                            <div class="metric-value negative">0.0%</div>
+                        </div>
+                        
+                        <div class="metric">
+                            <div class="metric-label">Toplam PnL</div>
+                            <div class="metric-value negative">+0.00%</div>
+                        </div>
+                        
+                        <div class="metric">
+                            <div class="metric-label">Ort. PnL</div>
+                            <div class="metric-value negative">+0.00%</div>
+                        </div>
+                        
+                        <div class="metric">
+                            <div class="metric-label">Kazanan</div>
+                            <div class="metric-value positive">0</div>
+                        </div>
+                        
+                        <div class="metric">
+                            <div class="metric-label">Kaybeden</div>
+                            <div class="metric-value negative">0</div>
+                        </div>
+                        
+                        <div class="metric">
+                            <div class="metric-label">Farklı Coin</div>
+                            <div class="metric-value">1</div>
+                        </div>
+                        
+                        <div class="metric">
+                            <div class="metric-label">Sharpe Ratio</div>
+                            <div class="metric-value negative">0.00</div>
+                        </div>
+                    </div>
+                    
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: 0%"></div>
+                    </div>
+                    
+                    <div style="margin-top: 15px; display: flex; justify-content: space-between; font-size: 0.9em; color: #6b7280;">
+                        <span>LONG: 1 | SHORT: 0</span>
+                        <span>Açık: 0 | Hata: 1</span>
+                    </div>
+                </div>
+
+                <div class="channel-card">
+                    <div class="channel-header">
+                        <div class="channel-name">
+                            Kripto Delisi | VİP 💰
+                        </div>
+                        <div class="rank-badge ">#10</div>
+                    </div>
+                    
+                    <div class="channel-metrics">
+                        <div class="metric">
+                            <div class="metric-label">Toplam Sinyal</div>
+                            <div class="metric-value">3</div>
+                        </div>
+                        
+                        <div class="metric">
+                            <div class="metric-label">Win Rate</div>
+                            <div class="metric-value negative">0.0%</div>
+                        </div>
+                        
+                        <div class="metric">
+                            <div class="metric-label">Toplam PnL</div>
+                            <div class="metric-value negative">+0.00%</div>
+                        </div>
+                        
+                        <div class="metric">
+                            <div class="metric-label">Ort. PnL</div>
+                            <div class="metric-value negative">+0.00%</div>
+                        </div>
+                        
+                        <div class="metric">
+                            <div class="metric-label">Kazanan</div>
+                            <div class="metric-value positive">0</div>
+                        </div>
+                        
+                        <div class="metric">
+                            <div class="metric-label">Kaybeden</div>
+                            <div class="metric-value negative">0</div>
+                        </div>
+                        
+                        <div class="metric">
+                            <div class="metric-label">Farklı Coin</div>
+                            <div class="metric-value">3</div>
+                        </div>
+                        
+                        <div class="metric">
+                            <div class="metric-label">Sharpe Ratio</div>
+                            <div class="metric-value negative">0.00</div>
+                        </div>
+                    </div>
+                    
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: 0%"></div>
+                    </div>
+                    
+                    <div style="margin-top: 15px; display: flex; justify-content: space-between; font-size: 0.9em; color: #6b7280;">
+                        <span>LONG: 2 | SHORT: 1</span>
+                        <span>Açık: 3 | Hata: 0</span>
+                    </div>
+                </div>
+
+                <div class="channel-card">
+                    <div class="channel-header">
+                        <div class="channel-name">
+                            Halil Güneş’linin Kripto Kanalı
+                        </div>
+                        <div class="rank-badge ">#11</div>
+                    </div>
+                    
+                    <div class="channel-metrics">
+                        <div class="metric">
+                            <div class="metric-label">Toplam Sinyal</div>
+                            <div class="metric-value">24</div>
+                        </div>
+                        
+                        <div class="metric">
+                            <div class="metric-label">Win Rate</div>
+                            <div class="metric-value negative">0.0%</div>
+                        </div>
+                        
+                        <div class="metric">
+                            <div class="metric-label">Toplam PnL</div>
+                            <div class="metric-value negative">-359.15%</div>
+                        </div>
+                        
+                        <div class="metric">
+                            <div class="metric-label">Ort. PnL</div>
+                            <div class="metric-value negative">-14.96%</div>
+                        </div>
+                        
+                        <div class="metric">
+                            <div class="metric-label">Kazanan</div>
+                            <div class="metric-value positive">0</div>
+                        </div>
+                        
+                        <div class="metric">
+                            <div class="metric-label">Kaybeden</div>
+                            <div class="metric-value negative">5</div>
+                        </div>
+                        
+                        <div class="metric">
+                            <div class="metric-label">Farklı Coin</div>
+                            <div class="metric-value">9</div>
+                        </div>
+                        
+                        <div class="metric">
+                            <div class="metric-label">Sharpe Ratio</div>
+                            <div class="metric-value negative">-0.42</div>
+                        </div>
+                    </div>
+                    
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: 0.0%"></div>
+                    </div>
+                    
+                    <div style="margin-top: 15px; display: flex; justify-content: space-between; font-size: 0.9em; color: #6b7280;">
+                        <span>LONG: 21 | SHORT: 3</span>
+                        <span>Açık: 19 | Hata: 0</span>
+                    </div>
+                </div>
+
+                <div class="channel-card">
+                    <div class="channel-header">
+                        <div class="channel-name">
+                            Coin Signals
+                        </div>
+                        <div class="rank-badge ">#12</div>
+                    </div>
+                    
+                    <div class="channel-metrics">
+                        <div class="metric">
+                            <div class="metric-label">Toplam Sinyal</div>
+                            <div class="metric-value">108</div>
+                        </div>
+                        
+                        <div class="metric">
+                            <div class="metric-label">Win Rate</div>
+                            <div class="metric-value negative">43.9%</div>
+                        </div>
+                        
+                        <div class="metric">
+                            <div class="metric-label">Toplam PnL</div>
+                            <div class="metric-value negative">-620.93%</div>
+                        </div>
+                        
+                        <div class="metric">
+                            <div class="metric-label">Ort. PnL</div>
+                            <div class="metric-value negative">-5.75%</div>
+                        </div>
+                        
+                        <div class="metric">
+                            <div class="metric-label">Kazanan</div>
+                            <div class="metric-value positive">47</div>
+                        </div>
+                        
+                        <div class="metric">
+                            <div class="metric-label">Kaybeden</div>
+                            <div class="metric-value negative">60</div>
+                        </div>
+                        
+                        <div class="metric">
+                            <div class="metric-label">Farklı Coin</div>
+                            <div class="metric-value">24</div>
+                        </div>
+                        
+                        <div class="metric">
+                            <div class="metric-label">Sharpe Ratio</div>
+                            <div class="metric-value negative">-0.07</div>
+                        </div>
+                    </div>
+                    
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: 43.925233644859816%"></div>
+                    </div>
+                    
+                    <div style="margin-top: 15px; display: flex; justify-content: space-between; font-size: 0.9em; color: #6b7280;">
+                        <span>LONG: 69 | SHORT: 39</span>
+                        <span>Açık: 1 | Hata: 0</span>
+                    </div>
+                </div>
+
+                <div class="channel-card">
+                    <div class="channel-header">
+                        <div class="channel-name">
+                            Binance signals
+                        </div>
+                        <div class="rank-badge ">#13</div>
+                    </div>
+                    
+                    <div class="channel-metrics">
+                        <div class="metric">
+                            <div class="metric-label">Toplam Sinyal</div>
+                            <div class="metric-value">26</div>
+                        </div>
+                        
+                        <div class="metric">
+                            <div class="metric-label">Win Rate</div>
+                            <div class="metric-value negative">0.0%</div>
+                        </div>
+                        
+                        <div class="metric">
+                            <div class="metric-label">Toplam PnL</div>
+                            <div class="metric-value negative">-1070.47%</div>
+                        </div>
+                        
+                        <div class="metric">
+                            <div class="metric-label">Ort. PnL</div>
+                            <div class="metric-value negative">-41.17%</div>
+                        </div>
+                        
+                        <div class="metric">
+                            <div class="metric-label">Kazanan</div>
+                            <div class="metric-value positive">0</div>
+                        </div>
+                        
+                        <div class="metric">
+                            <div class="metric-label">Kaybeden</div>
+                            <div class="metric-value negative">10</div>
+                        </div>
+                        
+                        <div class="metric">
+                            <div class="metric-label">Farklı Coin</div>
+                            <div class="metric-value">22</div>
+                        </div>
+                        
+                        <div class="metric">
+                            <div class="metric-label">Sharpe Ratio</div>
+                            <div class="metric-value negative">-0.51</div>
+                        </div>
+                    </div>
+                    
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: 0.0%"></div>
+                    </div>
+                    
+                    <div style="margin-top: 15px; display: flex; justify-content: space-between; font-size: 0.9em; color: #6b7280;">
+                        <span>LONG: 14 | SHORT: 12</span>
+                        <span>Açık: 14 | Hata: 2</span>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+        
+        <div class="section">
+            <h2>💎 En Başarılı Coinler (PnL'ye Göre)</h2>
+            <div class="chart-container">
+                <div class="bar-chart">
+
+                    <div class="bar-item">
+                        <div class="bar-label">PENGUUSDT</div>
+                        <div class="bar-container">
+                            <div class="bar-fill positive" style="width: 100.0%">
+                                +23538.02% (3W/1L)
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bar-item">
+                        <div class="bar-label">INJUSDT</div>
+                        <div class="bar-container">
+                            <div class="bar-fill positive" style="width: 28.55346371529976%">
+                                +6720.92% (2W/2L)
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bar-item">
+                        <div class="bar-label">AVAXUSDT</div>
+                        <div class="bar-container">
+                            <div class="bar-fill positive" style="width: 3.2966239301351603%">
+                                +775.96% (29W/7L)
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bar-item">
+                        <div class="bar-label">HYPERUSDT</div>
+                        <div class="bar-container">
+                            <div class="bar-fill positive" style="width: 2.1039152825938636%">
+                                +495.22% (1W/0L)
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bar-item">
+                        <div class="bar-label">APTUSDT</div>
+                        <div class="bar-container">
+                            <div class="bar-fill positive" style="width: 1.488315499774408%">
+                                +350.32% (3W/0L)
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bar-item">
+                        <div class="bar-label">TIAUSDT</div>
+                        <div class="bar-container">
+                            <div class="bar-fill positive" style="width: 1.2654845224874482%">
+                                +297.87% (5W/0L)
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bar-item">
+                        <div class="bar-label">LTCUSDT</div>
+                        <div class="bar-container">
+                            <div class="bar-fill positive" style="width: 1.171806294667096%">
+                                +275.82% (8W/5L)
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bar-item">
+                        <div class="bar-label">TONUSDT</div>
+                        <div class="bar-container">
+                            <div class="bar-fill positive" style="width: 1.0907459505939754%">
+                                +256.74% (5W/0L)
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bar-item">
+                        <div class="bar-label">ADAUSDT</div>
+                        <div class="bar-container">
+                            <div class="bar-fill positive" style="width: 1.0078587748672148%">
+                                +237.23% (5W/2L)
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bar-item">
+                        <div class="bar-label">FLOKIUSDT</div>
+                        <div class="bar-container">
+                            <div class="bar-fill positive" style="width: 0.9917571656409503%">
+                                +233.44% (2W/0L)
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bar-item">
+                        <div class="bar-label">LINKUSDT</div>
+                        <div class="bar-container">
+                            <div class="bar-fill positive" style="width: 0.974678413902274%">
+                                +229.42% (5W/0L)
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bar-item">
+                        <div class="bar-label">SEIUSDT</div>
+                        <div class="bar-container">
+                            <div class="bar-fill positive" style="width: 0.7659097919026325%">
+                                +180.28% (2W/0L)
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bar-item">
+                        <div class="bar-label">EPICUSDT</div>
+                        <div class="bar-container">
+                            <div class="bar-fill positive" style="width: 0.6948757796959983%">
+                                +163.56% (1W/0L)
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bar-item">
+                        <div class="bar-label">WLFIUSDT</div>
+                        <div class="bar-container">
+                            <div class="bar-fill positive" style="width: 0.6597836181632951%">
+                                +155.30% (2W/0L)
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bar-item">
+                        <div class="bar-label">PUMPUSDT</div>
+                        <div class="bar-container">
+                            <div class="bar-fill positive" style="width: 0.6139428889940616%">
+                                +144.51% (2W/0L)
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+        
+        <div class="section">
+            <h2>📊 Side ve Leverage Dağılımı</h2>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 30px;">
+                <div class="chart-container">
+                    <h3 style="margin-bottom: 20px; color: #1f2937;">LONG vs SHORT</h3>
+                    <div class="bar-chart">
+                        <div class="bar-item">
+                            <div class="bar-label">LONG</div>
+                            <div class="bar-container">
+                                <div class="bar-fill positive" style="width: 79.33130699088146%">
+                                    261 (79.3%)
+                                </div>
+                            </div>
+                        </div>
+                        <div class="bar-item">
+                            <div class="bar-label">SHORT</div>
+                            <div class="bar-container">
+                                <div class="bar-fill negative" style="width: 20.66869300911854%">
+                                    68 (20.7%)
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="chart-container">
+                    <h3 style="margin-bottom: 20px; color: #1f2937;">Kaldıraç Kullanımı</h3>
+                    <div class="bar-chart">
+
+                        <div class="bar-item">
+                            <div class="bar-label">N/A</div>
+                            <div class="bar-container">
+                                <div class="bar-fill" style="width: 100.0%">
+                                    295 (89.7%)
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="bar-item">
+                            <div class="bar-label">3x</div>
+                            <div class="bar-container">
+                                <div class="bar-fill" style="width: 0.3389830508474576%">
+                                    1 (0.3%)
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="bar-item">
+                            <div class="bar-label">4x</div>
+                            <div class="bar-container">
+                                <div class="bar-fill" style="width: 1.3559322033898304%">
+                                    4 (1.2%)
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="bar-item">
+                            <div class="bar-label">5x</div>
+                            <div class="bar-container">
+                                <div class="bar-fill" style="width: 1.0169491525423728%">
+                                    3 (0.9%)
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="bar-item">
+                            <div class="bar-label">6x</div>
+                            <div class="bar-container">
+                                <div class="bar-fill" style="width: 0.6779661016949152%">
+                                    2 (0.6%)
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="bar-item">
+                            <div class="bar-label">7x</div>
+                            <div class="bar-container">
+                                <div class="bar-fill" style="width: 0.6779661016949152%">
+                                    2 (0.6%)
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="bar-item">
+                            <div class="bar-label">10x</div>
+                            <div class="bar-container">
+                                <div class="bar-fill" style="width: 3.389830508474576%">
+                                    10 (3.0%)
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="bar-item">
+                            <div class="bar-label">15x</div>
+                            <div class="bar-container">
+                                <div class="bar-fill" style="width: 0.3389830508474576%">
+                                    1 (0.3%)
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="bar-item">
+                            <div class="bar-label">20x</div>
+                            <div class="bar-container">
+                                <div class="bar-fill" style="width: 0.3389830508474576%">
+                                    1 (0.3%)
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="bar-item">
+                            <div class="bar-label">30x</div>
+                            <div class="bar-container">
+                                <div class="bar-fill" style="width: 2.711864406779661%">
+                                    8 (2.4%)
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="bar-item">
+                            <div class="bar-label">40x</div>
+                            <div class="bar-container">
+                                <div class="bar-fill" style="width: 0.6779661016949152%">
+                                    2 (0.6%)
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="section">
+            <h2>📋 Son 30 Sinyal Detayı</h2>
+            <div class="signal-grid">
+
+                <div class="signal-card loss">
+                    <div class="signal-header">
+                        <div class="signal-symbol">INJUSDT</div>
+                        <div class="signal-badge loss">LOSS</div>
+                    </div>
+                    
+                    <div class="signal-details">
+                        <div class="signal-detail">
+                            <div class="signal-detail-label">Side</div>
+                            <div class="signal-detail-value">LONG</div>
+                        </div>
+                        <div class="signal-detail">
+                            <div class="signal-detail-label">Leverage</div>
+                            <div class="signal-detail-value">15x</div>
+                        </div>
+                        <div class="signal-detail">
+                            <div class="signal-detail-label">Entry</div>
+                            <div class="signal-detail-value">9.090000</div>
+                        </div>
+                        <div class="signal-detail">
+                            <div class="signal-detail-label">Take Profit</div>
+                            <div class="signal-detail-value">9.4000</div>
+                        </div>
+                        <div class="signal-detail">
+                            <div class="signal-detail-label">Stop Loss</div>
+                            <div class="signal-detail-value">8.8500</div>
+                        </div>
+                    </div>
+                    
+                    <div class="signal-pnl negative">
+                        PnL: -39.60%
+                    </div>
+                    
+                    <div class="signal-footer">
+                        <span>📡 KRİPTO KAMPI - ASLA PARA İSTEM</span>
+                        <span>🕐 2025-10-16T07:14</span>
+                    </div>
+                </div>
+
+                <div class="signal-card loss">
+                    <div class="signal-header">
+                        <div class="signal-symbol">INJUSDT</div>
+                        <div class="signal-badge loss">LOSS</div>
+                    </div>
+                    
+                    <div class="signal-details">
+                        <div class="signal-detail">
+                            <div class="signal-detail-label">Side</div>
+                            <div class="signal-detail-value">LONG</div>
+                        </div>
+                        <div class="signal-detail">
+                            <div class="signal-detail-label">Leverage</div>
+                            <div class="signal-detail-value">15x</div>
+                        </div>
+                        <div class="signal-detail">
+                            <div class="signal-detail-label">Entry</div>
+                            <div class="signal-detail-value">9.090000</div>
+                        </div>
+                        <div class="signal-detail">
+                            <div class="signal-detail-label">Take Profit</div>
+                            <div class="signal-detail-value">9.4000</div>
+                        </div>
+                        <div class="signal-detail">
+                            <div class="signal-detail-label">Stop Loss</div>
+                            <div class="signal-detail-value">8.8500</div>
+                        </div>
+                    </div>
+                    
+                    <div class="signal-pnl negative">
+                        PnL: -39.60%
+                    </div>
+                    
+                    <div class="signal-footer">
+                        <span>📡 KRİPTO KAMPI - ÜCRETSİZ İŞLEM"</span>
+                        <span>🕐 2025-10-16T07:14</span>
+                    </div>
+                </div>
+
+                <div class="signal-card win">
+                    <div class="signal-header">
+                        <div class="signal-symbol">SOLUSDT</div>
+                        <div class="signal-badge win">WIN</div>
+                    </div>
+                    
+                    <div class="signal-details">
+                        <div class="signal-detail">
+                            <div class="signal-detail-label">Side</div>
+                            <div class="signal-detail-value">SHORT</div>
+                        </div>
+                        <div class="signal-detail">
+                            <div class="signal-detail-label">Leverage</div>
+                            <div class="signal-detail-value">15x</div>
+                        </div>
+                        <div class="signal-detail">
+                            <div class="signal-detail-label">Entry</div>
+                            <div class="signal-detail-value">205.799375</div>
+                        </div>
+                        <div class="signal-detail">
+                            <div class="signal-detail-label">Take Profit</div>
+                            <div class="signal-detail-value">198.4125</div>
+                        </div>
+                        <div class="signal-detail">
+                            <div class="signal-detail-label">Stop Loss</div>
+                            <div class="signal-detail-value">212.1948</div>
+                        </div>
+                    </div>
+                    
+                    <div class="signal-pnl positive">
+                        PnL: +53.84%
+                    </div>
+                    
+                    <div class="signal-footer">
+                        <span>📡 Coin Signals</span>
+                        <span>🕐 2025-10-15T20:32</span>
+                    </div>
+                </div>
+
+                <div class="signal-card win">
+                    <div class="signal-header">
+                        <div class="signal-symbol">PENGUUSDT</div>
+                        <div class="signal-badge win">WIN</div>
+                    </div>
+                    
+                    <div class="signal-details">
+                        <div class="signal-detail">
+                            <div class="signal-detail-label">Side</div>
+                            <div class="signal-detail-value">LONG</div>
+                        </div>
+                        <div class="signal-detail">
+                            <div class="signal-detail-label">Leverage</div>
+                            <div class="signal-detail-value">6x</div>
+                        </div>
+                        <div class="signal-detail">
+                            <div class="signal-detail-label">Entry</div>
+                            <div class="signal-detail-value">0.024400</div>
+                        </div>
+                        <div class="signal-detail">
+                            <div class="signal-detail-label">Take Profit</div>
+                            <div class="signal-detail-value">0.0259</div>
+                        </div>
+                        <div class="signal-detail">
+                            <div class="signal-detail-label">Stop Loss</div>
+                            <div class="signal-detail-value">N/A</div>
+                        </div>
+                    </div>
+                    
+                    <div class="signal-pnl positive">
+                        PnL: +36.89%
+                    </div>
+                    
+                    <div class="signal-footer">
+                        <span>📡 Kripto Simpsons</span>
+                        <span>🕐 2025-10-15T05:40</span>
+                    </div>
+                </div>
+
+                <div class="signal-card win">
+                    <div class="signal-header">
+                        <div class="signal-symbol">TIAUSDT</div>
+                        <div class="signal-badge win">WIN</div>
+                    </div>
+                    
+                    <div class="signal-details">
+                        <div class="signal-detail">
+                            <div class="signal-detail-label">Side</div>
+                            <div class="signal-detail-value">LONG</div>
+                        </div>
+                        <div class="signal-detail">
+                            <div class="signal-detail-label">Leverage</div>
+                            <div class="signal-detail-value">7x</div>
+                        </div>
+                        <div class="signal-detail">
+                            <div class="signal-detail-label">Entry</div>
+                            <div class="signal-detail-value">1.100000</div>
+                        </div>
+                        <div class="signal-detail">
+                            <div class="signal-detail-label">Take Profit</div>
+                            <div class="signal-detail-value">1.1700</div>
+                        </div>
+                        <div class="signal-detail">
+                            <div class="signal-detail-label">Stop Loss</div>
+                            <div class="signal-detail-value">N/A</div>
+                        </div>
+                    </div>
+                    
+                    <div class="signal-pnl positive">
+                        PnL: +44.55%
+                    </div>
+                    
+                    <div class="signal-footer">
+                        <span>📡 Kripto Simpsons</span>
+                        <span>🕐 2025-10-14T08:15</span>
+                    </div>
+                </div>
+
+                <div class="signal-card loss">
+                    <div class="signal-header">
+                        <div class="signal-symbol">ETHUSDT</div>
+                        <div class="signal-badge loss">LOSS</div>
+                    </div>
+                    
+                    <div class="signal-details">
+                        <div class="signal-detail">
+                            <div class="signal-detail-label">Side</div>
+                            <div class="signal-detail-value">LONG</div>
+                        </div>
+                        <div class="signal-detail">
+                            <div class="signal-detail-label">Leverage</div>
+                            <div class="signal-detail-value">15x</div>
+                        </div>
+                        <div class="signal-detail">
+                            <div class="signal-detail-label">Entry</div>
+                            <div class="signal-detail-value">4016.000000</div>
+                        </div>
+                        <div class="signal-detail">
+                            <div class="signal-detail-label">Take Profit</div>
+                            <div class="signal-detail-value">4182.0000</div>
+                        </div>
+                        <div class="signal-detail">
+                            <div class="signal-detail-label">Stop Loss</div>
+                            <div class="signal-detail-value">3908.2750</div>
+                        </div>
+                    </div>
+                    
+                    <div class="signal-pnl negative">
+                        PnL: -40.24%
+                    </div>
+                    
+                    <div class="signal-footer">
+                        <span>📡 Coin Signals</span>
+                        <span>🕐 2025-10-13T21:00</span>
+                    </div>
+                </div>
+
+                <div class="signal-card loss">
+                    <div class="signal-header">
+                        <div class="signal-symbol">LTCUSDT</div>
+                        <div class="signal-badge loss">LOSS</div>
+                    </div>
+                    
+                    <div class="signal-details">
+                        <div class="signal-detail">
+                            <div class="signal-detail-label">Side</div>
+                            <div class="signal-detail-value">LONG</div>
+                        </div>
+                        <div class="signal-detail">
+                            <div class="signal-detail-label">Leverage</div>
+                            <div class="signal-detail-value">15x</div>
+                        </div>
+                        <div class="signal-detail">
+                            <div class="signal-detail-label">Entry</div>
+                            <div class="signal-detail-value">94.455000</div>
+                        </div>
+                        <div class="signal-detail">
+                            <div class="signal-detail-label">Take Profit</div>
+                            <div class="signal-detail-value">97.9900</div>
+                        </div>
+                        <div class="signal-detail">
+                            <div class="signal-detail-label">Stop Loss</div>
+                            <div class="signal-detail-value">91.4488</div>
+                        </div>
+                    </div>
+                    
+                    <div class="signal-pnl negative">
+                        PnL: -47.74%
+                    </div>
+                    
+                    <div class="signal-footer">
+                        <span>📡 Coin Signals</span>
+                        <span>🕐 2025-10-13T20:18</span>
+                    </div>
+                </div>
+
+                <div class="signal-card loss">
+                    <div class="signal-header">
+                        <div class="signal-symbol">XRPUSDT</div>
+                        <div class="signal-badge loss">LOSS</div>
+                    </div>
+                    
+                    <div class="signal-details">
+                        <div class="signal-detail">
+                            <div class="signal-detail-label">Side</div>
+                            <div class="signal-detail-value">LONG</div>
+                        </div>
+                        <div class="signal-detail">
+                            <div class="signal-detail-label">Leverage</div>
+                            <div class="signal-detail-value">15x</div>
+                        </div>
+                        <div class="signal-detail">
+                            <div class="signal-detail-label">Entry</div>
+                            <div class="signal-detail-value">2.560000</div>
+                        </div>
+                        <div class="signal-detail">
+                            <div class="signal-detail-label">Take Profit</div>
+                            <div class="signal-detail-value">2.6650</div>
+                        </div>
+                        <div class="signal-detail">
+                            <div class="signal-detail-label">Stop Loss</div>
+                            <div class="signal-detail-value">2.4800</div>
+                        </div>
+                    </div>
+                    
+                    <div class="signal-pnl negative">
+                        PnL: -46.88%
+                    </div>
+                    
+                    <div class="signal-footer">
+                        <span>📡 KRİPTO KAMPI - ASLA PARA İSTEM</span>
+                        <span>🕐 2025-10-13T04:49</span>
+                    </div>
+                </div>
+
+                <div class="signal-card loss">
+                    <div class="signal-header">
+                        <div class="signal-symbol">XRPUSDT</div>
+                        <div class="signal-badge loss">LOSS</div>
+                    </div>
+                    
+                    <div class="signal-details">
+                        <div class="signal-detail">
+                            <div class="signal-detail-label">Side</div>
+                            <div class="signal-detail-value">LONG</div>
+                        </div>
+                        <div class="signal-detail">
+                            <div class="signal-detail-label">Leverage</div>
+                            <div class="signal-detail-value">15x</div>
+                        </div>
+                        <div class="signal-detail">
+                            <div class="signal-detail-label">Entry</div>
+                            <div class="signal-detail-value">2.560000</div>
+                        </div>
+                        <div class="signal-detail">
+                            <div class="signal-detail-label">Take Profit</div>
+                            <div class="signal-detail-value">2.6650</div>
+                        </div>
+                        <div class="signal-detail">
+                            <div class="signal-detail-label">Stop Loss</div>
+                            <div class="signal-detail-value">2.4800</div>
+                        </div>
+                    </div>
+                    
+                    <div class="signal-pnl negative">
+                        PnL: -46.88%
+                    </div>
+                    
+                    <div class="signal-footer">
+                        <span>📡 KRİPTO KAMPI - ÜCRETSİZ İŞLEM"</span>
+                        <span>🕐 2025-10-13T04:49</span>
+                    </div>
+                </div>
+
+                <div class="signal-card loss">
+                    <div class="signal-header">
+                        <div class="signal-symbol">AVAXUSDT</div>
+                        <div class="signal-badge loss">LOSS</div>
+                    </div>
+                    
+                    <div class="signal-details">
+                        <div class="signal-detail">
+                            <div class="signal-detail-label">Side</div>
+                            <div class="signal-detail-value">LONG</div>
+                        </div>
+                        <div class="signal-detail">
+                            <div class="signal-detail-label">Leverage</div>
+                            <div class="signal-detail-value">15x</div>
+                        </div>
+                        <div class="signal-detail">
+                            <div class="signal-detail-label">Entry</div>
+                            <div class="signal-detail-value">22.250000</div>
+                        </div>
+                        <div class="signal-detail">
+                            <div class="signal-detail-label">Take Profit</div>
+                            <div class="signal-detail-value">N/A</div>
+                        </div>
+                        <div class="signal-detail">
+                            <div class="signal-detail-label">Stop Loss</div>
+                            <div class="signal-detail-value">21.4000</div>
+                        </div>
+                    </div>
+                    
+                    <div class="signal-pnl negative">
+                        PnL: -57.30%
+                    </div>
+                    
+                    <div class="signal-footer">
+                        <span>📡 KRİPTO KAMPI - ASLA PARA İSTEM</span>
+                        <span>🕐 2025-10-13T04:48</span>
+                    </div>
+                </div>
+
+                <div class="signal-card loss">
+                    <div class="signal-header">
+                        <div class="signal-symbol">AVAXUSDT</div>
+                        <div class="signal-badge loss">LOSS</div>
+                    </div>
+                    
+                    <div class="signal-details">
+                        <div class="signal-detail">
+                            <div class="signal-detail-label">Side</div>
+                            <div class="signal-detail-value">LONG</div>
+                        </div>
+                        <div class="signal-detail">
+                            <div class="signal-detail-label">Leverage</div>
+                            <div class="signal-detail-value">15x</div>
+                        </div>
+                        <div class="signal-detail">
+                            <div class="signal-detail-label">Entry</div>
+                            <div class="signal-detail-value">22.250000</div>
+                        </div>
+                        <div class="signal-detail">
+                            <div class="signal-detail-label">Take Profit</div>
+                            <div class="signal-detail-value">N/A</div>
+                        </div>
+                        <div class="signal-detail">
+                            <div class="signal-detail-label">Stop Loss</div>
+                            <div class="signal-detail-value">21.4000</div>
+                        </div>
+                    </div>
+                    
+                    <div class="signal-pnl negative">
+                        PnL: -57.30%
+                    </div>
+                    
+                    <div class="signal-footer">
+                        <span>📡 KRİPTO KAMPI - ÜCRETSİZ İŞLEM"</span>
+                        <span>🕐 2025-10-13T04:48</span>
+                    </div>
+                </div>
+
+                <div class="signal-card open">
+                    <div class="signal-header">
+                        <div class="signal-symbol">BONKUSDT</div>
+                        <div class="signal-badge open">OPEN</div>
+                    </div>
+                    
+                    <div class="signal-details">
+                        <div class="signal-detail">
+                            <div class="signal-detail-label">Side</div>
+                            <div class="signal-detail-value">LONG</div>
+                        </div>
+                        <div class="signal-detail">
+                            <div class="signal-detail-label">Leverage</div>
+                            <div class="signal-detail-value">20x</div>
+                        </div>
+                        <div class="signal-detail">
+                            <div class="signal-detail-label">Entry</div>
+                            <div class="signal-detail-value">0.013483</div>
+                        </div>
+                        <div class="signal-detail">
+                            <div class="signal-detail-label">Take Profit</div>
+                            <div class="signal-detail-value">N/A</div>
+                        </div>
+                        <div class="signal-detail">
+                            <div class="signal-detail-label">Stop Loss</div>
+                            <div class="signal-detail-value">N/A</div>
+                        </div>
+                    </div>
+                    
+                    <div class="signal-pnl ">
+                        PnL: +0.00%
+                    </div>
+                    
+                    <div class="signal-footer">
+                        <span>📡 Crypto Devil® [ Private 🔒 ]</span>
+                        <span>🕐 2025-10-12T18:46</span>
+                    </div>
+                </div>
+
+                <div class="signal-card loss">
+                    <div class="signal-header">
+                        <div class="signal-symbol">ETHUSDT</div>
+                        <div class="signal-badge loss">LOSS</div>
+                    </div>
+                    
+                    <div class="signal-details">
+                        <div class="signal-detail">
+                            <div class="signal-detail-label">Side</div>
+                            <div class="signal-detail-value">LONG</div>
+                        </div>
+                        <div class="signal-detail">
+                            <div class="signal-detail-label">Leverage</div>
+                            <div class="signal-detail-value">15x</div>
+                        </div>
+                        <div class="signal-detail">
+                            <div class="signal-detail-label">Entry</div>
+                            <div class="signal-detail-value">3752.000000</div>
+                        </div>
+                        <div class="signal-detail">
+                            <div class="signal-detail-label">Take Profit</div>
+                            <div class="signal-detail-value">3876.0000</div>
+                        </div>
+                        <div class="signal-detail">
+                            <div class="signal-detail-label">Stop Loss</div>
+                            <div class="signal-detail-value">3636.7600</div>
+                        </div>
+                    </div>
+                    
+                    <div class="signal-pnl negative">
+                        PnL: -46.07%
+                    </div>
+                    
+                    <div class="signal-footer">
+                        <span>📡 Coin Signals</span>
+                        <span>🕐 2025-10-12T15:18</span>
+                    </div>
+                </div>
+
+                <div class="signal-card loss">
+                    <div class="signal-header">
+                        <div class="signal-symbol">SOLUSDT</div>
+                        <div class="signal-badge loss">LOSS</div>
+                    </div>
+                    
+                    <div class="signal-details">
+                        <div class="signal-detail">
+                            <div class="signal-detail-label">Side</div>
+                            <div class="signal-detail-value">LONG</div>
+                        </div>
+                        <div class="signal-detail">
+                            <div class="signal-detail-label">Leverage</div>
+                            <div class="signal-detail-value">15x</div>
+                        </div>
+                        <div class="signal-detail">
+                            <div class="signal-detail-label">Entry</div>
+                            <div class="signal-detail-value">173.184400</div>
+                        </div>
+                        <div class="signal-detail">
+                            <div class="signal-detail-label">Take Profit</div>
+                            <div class="signal-detail-value">180.5312</div>
+                        </div>
+                        <div class="signal-detail">
+                            <div class="signal-detail-label">Stop Loss</div>
+                            <div class="signal-detail-value">166.0040</div>
+                        </div>
+                    </div>
+                    
+                    <div class="signal-pnl negative">
+                        PnL: -62.19%
+                    </div>
+                    
+                    <div class="signal-footer">
+                        <span>📡 Coin Signals</span>
+                        <span>🕐 2025-10-12T15:07</span>
+                    </div>
+                </div>
+
+                <div class="signal-card loss">
+                    <div class="signal-header">
+                        <div class="signal-symbol">AVAXUSDT</div>
+                        <div class="signal-badge loss">LOSS</div>
+                    </div>
+                    
+                    <div class="signal-details">
+                        <div class="signal-detail">
+                            <div class="signal-detail-label">Side</div>
+                            <div class="signal-detail-value">LONG</div>
+                        </div>
+                        <div class="signal-detail">
+                            <div class="signal-detail-label">Leverage</div>
+                            <div class="signal-detail-value">15x</div>
+                        </div>
+                        <div class="signal-detail">
+                            <div class="signal-detail-label">Entry</div>
+                            <div class="signal-detail-value">21.600000</div>
+                        </div>
+                        <div class="signal-detail">
+                            <div class="signal-detail-label">Take Profit</div>
+                            <div class="signal-detail-value">22.8500</div>
+                        </div>
+                        <div class="signal-detail">
+                            <div class="signal-detail-label">Stop Loss</div>
+                            <div class="signal-detail-value">21.0000</div>
+                        </div>
+                    </div>
+                    
+                    <div class="signal-pnl negative">
+                        PnL: -41.67%
+                    </div>
+                    
+                    <div class="signal-footer">
+                        <span>📡 KRİPTO KAMPI - ASLA PARA İSTEM</span>
+                        <span>🕐 2025-10-12T14:50</span>
+                    </div>
+                </div>
+
+                <div class="signal-card loss">
+                    <div class="signal-header">
+                        <div class="signal-symbol">AVAXUSDT</div>
+                        <div class="signal-badge loss">LOSS</div>
+                    </div>
+                    
+                    <div class="signal-details">
+                        <div class="signal-detail">
+                            <div class="signal-detail-label">Side</div>
+                            <div class="signal-detail-value">LONG</div>
+                        </div>
+                        <div class="signal-detail">
+                            <div class="signal-detail-label">Leverage</div>
+                            <div class="signal-detail-value">15x</div>
+                        </div>
+                        <div class="signal-detail">
+                            <div class="signal-detail-label">Entry</div>
+                            <div class="signal-detail-value">21.600000</div>
+                        </div>
+                        <div class="signal-detail">
+                            <div class="signal-detail-label">Take Profit</div>
+                            <div class="signal-detail-value">22.8500</div>
+                        </div>
+                        <div class="signal-detail">
+                            <div class="signal-detail-label">Stop Loss</div>
+                            <div class="signal-detail-value">21.0000</div>
+                        </div>
+                    </div>
+                    
+                    <div class="signal-pnl negative">
+                        PnL: -41.67%
+                    </div>
+                    
+                    <div class="signal-footer">
+                        <span>📡 KRİPTO KAMPI - ÜCRETSİZ İŞLEM"</span>
+                        <span>🕐 2025-10-12T14:49</span>
+                    </div>
+                </div>
+
+                <div class="signal-card win">
+                    <div class="signal-header">
+                        <div class="signal-symbol">LTCUSDT</div>
+                        <div class="signal-badge win">WIN</div>
+                    </div>
+                    
+                    <div class="signal-details">
+                        <div class="signal-detail">
+                            <div class="signal-detail-label">Side</div>
+                            <div class="signal-detail-value">SHORT</div>
+                        </div>
+                        <div class="signal-detail">
+                            <div class="signal-detail-label">Leverage</div>
+                            <div class="signal-detail-value">15x</div>
+                        </div>
+                        <div class="signal-detail">
+                            <div class="signal-detail-label">Entry</div>
+                            <div class="signal-detail-value">134.750000</div>
+                        </div>
+                        <div class="signal-detail">
+                            <div class="signal-detail-label">Take Profit</div>
+                            <div class="signal-detail-value">128.7000</div>
+                        </div>
+                        <div class="signal-detail">
+                            <div class="signal-detail-label">Stop Loss</div>
+                            <div class="signal-detail-value">139.9913</div>
+                        </div>
+                    </div>
+                    
+                    <div class="signal-pnl positive">
+                        PnL: +67.35%
+                    </div>
+                    
+                    <div class="signal-footer">
+                        <span>📡 Coin Signals</span>
+                        <span>🕐 2025-10-11T12:30</span>
+                    </div>
+                </div>
+
+                <div class="signal-card win">
+                    <div class="signal-header">
+                        <div class="signal-symbol">DOGEUSDT</div>
+                        <div class="signal-badge win">WIN</div>
+                    </div>
+                    
+                    <div class="signal-details">
+                        <div class="signal-detail">
+                            <div class="signal-detail-label">Side</div>
+                            <div class="signal-detail-value">SHORT</div>
+                        </div>
+                        <div class="signal-detail">
+                            <div class="signal-detail-label">Leverage</div>
+                            <div class="signal-detail-value">15x</div>
+                        </div>
+                        <div class="signal-detail">
+                            <div class="signal-detail-label">Entry</div>
+                            <div class="signal-detail-value">0.239000</div>
+                        </div>
+                        <div class="signal-detail">
+                            <div class="signal-detail-label">Take Profit</div>
+                            <div class="signal-detail-value">0.2273</div>
+                        </div>
+                        <div class="signal-detail">
+                            <div class="signal-detail-label">Stop Loss</div>
+                            <div class="signal-detail-value">0.2626</div>
+                        </div>
+                    </div>
+                    
+                    <div class="signal-pnl positive">
+                        PnL: +73.37%
+                    </div>
+                    
+                    <div class="signal-footer">
+                        <span>📡 Coin Signals</span>
+                        <span>🕐 2025-10-11T10:35</span>
+                    </div>
+                </div>
+
+                <div class="signal-card win">
+                    <div class="signal-header">
+                        <div class="signal-symbol">SOLUSDT</div>
+                        <div class="signal-badge win">WIN</div>
+                    </div>
+                    
+                    <div class="signal-details">
+                        <div class="signal-detail">
+                            <div class="signal-detail-label">Side</div>
+                            <div class="signal-detail-value">SHORT</div>
+                        </div>
+                        <div class="signal-detail">
+                            <div class="signal-detail-label">Leverage</div>
+                            <div class="signal-detail-value">15x</div>
+                        </div>
+                        <div class="signal-detail">
+                            <div class="signal-detail-label">Entry</div>
+                            <div class="signal-detail-value">229.600000</div>
+                        </div>
+                        <div class="signal-detail">
+                            <div class="signal-detail-label">Take Profit</div>
+                            <div class="signal-detail-value">212.8000</div>
+                        </div>
+                        <div class="signal-detail">
+                            <div class="signal-detail-label">Stop Loss</div>
+                            <div class="signal-detail-value">257.0800</div>
+                        </div>
+                    </div>
+                    
+                    <div class="signal-pnl positive">
+                        PnL: +109.76%
+                    </div>
+                    
+                    <div class="signal-footer">
+                        <span>📡 Coin Signals</span>
+                        <span>🕐 2025-10-11T10:34</span>
+                    </div>
+                </div>
+
+                <div class="signal-card win">
+                    <div class="signal-header">
+                        <div class="signal-symbol">XRPUSDT</div>
+                        <div class="signal-badge win">WIN</div>
+                    </div>
+                    
+                    <div class="signal-details">
+                        <div class="signal-detail">
+                            <div class="signal-detail-label">Side</div>
+                            <div class="signal-detail-value">SHORT</div>
+                        </div>
+                        <div class="signal-detail">
+                            <div class="signal-detail-label">Leverage</div>
+                            <div class="signal-detail-value">15x</div>
+                        </div>
+                        <div class="signal-detail">
+                            <div class="signal-detail-label">Entry</div>
+                            <div class="signal-detail-value">2.753105</div>
+                        </div>
+                        <div class="signal-detail">
+                            <div class="signal-detail-label">Take Profit</div>
+                            <div class="signal-detail-value">2.6258</div>
+                        </div>
+                        <div class="signal-detail">
+                            <div class="signal-detail-label">Stop Loss</div>
+                            <div class="signal-detail-value">2.9300</div>
+                        </div>
+                    </div>
+                    
+                    <div class="signal-pnl positive">
+                        PnL: +69.37%
+                    </div>
+                    
+                    <div class="signal-footer">
+                        <span>📡 Coin Signals</span>
+                        <span>🕐 2025-10-11T08:31</span>
+                    </div>
+                </div>
+
+                <div class="signal-card win">
+                    <div class="signal-header">
+                        <div class="signal-symbol">SUIUSDT</div>
+                        <div class="signal-badge win">WIN</div>
+                    </div>
+                    
+                    <div class="signal-details">
+                        <div class="signal-detail">
+                            <div class="signal-detail-label">Side</div>
+                            <div class="signal-detail-value">SHORT</div>
+                        </div>
+                        <div class="signal-detail">
+                            <div class="signal-detail-label">Leverage</div>
+                            <div class="signal-detail-value">15x</div>
+                        </div>
+                        <div class="signal-detail">
+                            <div class="signal-detail-label">Entry</div>
+                            <div class="signal-detail-value">3.467625</div>
+                        </div>
+                        <div class="signal-detail">
+                            <div class="signal-detail-label">Take Profit</div>
+                            <div class="signal-detail-value">3.3247</div>
+                        </div>
+                        <div class="signal-detail">
+                            <div class="signal-detail-label">Stop Loss</div>
+                            <div class="signal-detail-value">3.6389</div>
+                        </div>
+                    </div>
+                    
+                    <div class="signal-pnl positive">
+                        PnL: +61.80%
+                    </div>
+                    
+                    <div class="signal-footer">
+                        <span>📡 Coin Signals</span>
+                        <span>🕐 2025-10-11T08:30</span>
+                    </div>
+                </div>
+
+                <div class="signal-card loss">
+                    <div class="signal-header">
+                        <div class="signal-symbol">SOLUSDT</div>
+                        <div class="signal-badge loss">LOSS</div>
+                    </div>
+                    
+                    <div class="signal-details">
+                        <div class="signal-detail">
+                            <div class="signal-detail-label">Side</div>
+                            <div class="signal-detail-value">LONG</div>
+                        </div>
+                        <div class="signal-detail">
+                            <div class="signal-detail-label">Leverage</div>
+                            <div class="signal-detail-value">7x</div>
+                        </div>
+                        <div class="signal-detail">
+                            <div class="signal-detail-label">Entry</div>
+                            <div class="signal-detail-value">185.000000</div>
+                        </div>
+                        <div class="signal-detail">
+                            <div class="signal-detail-label">Take Profit</div>
+                            <div class="signal-detail-value">200.0000</div>
+                        </div>
+                        <div class="signal-detail">
+                            <div class="signal-detail-label">Stop Loss</div>
+                            <div class="signal-detail-value">178.0000</div>
+                        </div>
+                    </div>
+                    
+                    <div class="signal-pnl negative">
+                        PnL: -26.49%
+                    </div>
+                    
+                    <div class="signal-footer">
+                        <span>📡 Kripto Simpsons</span>
+                        <span>🕐 2025-10-11T06:34</span>
+                    </div>
+                </div>
+
+                <div class="signal-card loss">
+                    <div class="signal-header">
+                        <div class="signal-symbol">ETHUSDT</div>
+                        <div class="signal-badge loss">LOSS</div>
+                    </div>
+                    
+                    <div class="signal-details">
+                        <div class="signal-detail">
+                            <div class="signal-detail-label">Side</div>
+                            <div class="signal-detail-value">LONG</div>
+                        </div>
+                        <div class="signal-detail">
+                            <div class="signal-detail-label">Leverage</div>
+                            <div class="signal-detail-value">15x</div>
+                        </div>
+                        <div class="signal-detail">
+                            <div class="signal-detail-label">Entry</div>
+                            <div class="signal-detail-value">4100.000000</div>
+                        </div>
+                        <div class="signal-detail">
+                            <div class="signal-detail-label">Take Profit</div>
+                            <div class="signal-detail-value">4210.0000</div>
+                        </div>
+                        <div class="signal-detail">
+                            <div class="signal-detail-label">Stop Loss</div>
+                            <div class="signal-detail-value">4040.0000</div>
+                        </div>
+                    </div>
+                    
+                    <div class="signal-pnl negative">
+                        PnL: -21.95%
+                    </div>
+                    
+                    <div class="signal-footer">
+                        <span>📡 KRİPTO KAMPI - ASLA PARA İSTEM</span>
+                        <span>🕐 2025-10-10T17:18</span>
+                    </div>
+                </div>
+
+                <div class="signal-card loss">
+                    <div class="signal-header">
+                        <div class="signal-symbol">ETHUSDT</div>
+                        <div class="signal-badge loss">LOSS</div>
+                    </div>
+                    
+                    <div class="signal-details">
+                        <div class="signal-detail">
+                            <div class="signal-detail-label">Side</div>
+                            <div class="signal-detail-value">LONG</div>
+                        </div>
+                        <div class="signal-detail">
+                            <div class="signal-detail-label">Leverage</div>
+                            <div class="signal-detail-value">15x</div>
+                        </div>
+                        <div class="signal-detail">
+                            <div class="signal-detail-label">Entry</div>
+                            <div class="signal-detail-value">4100.000000</div>
+                        </div>
+                        <div class="signal-detail">
+                            <div class="signal-detail-label">Take Profit</div>
+                            <div class="signal-detail-value">4210.0000</div>
+                        </div>
+                        <div class="signal-detail">
+                            <div class="signal-detail-label">Stop Loss</div>
+                            <div class="signal-detail-value">4040.0000</div>
+                        </div>
+                    </div>
+                    
+                    <div class="signal-pnl negative">
+                        PnL: -21.95%
+                    </div>
+                    
+                    <div class="signal-footer">
+                        <span>📡 KRİPTO KAMPI - ÜCRETSİZ İŞLEM"</span>
+                        <span>🕐 2025-10-10T17:18</span>
+                    </div>
+                </div>
+
+                <div class="signal-card win">
+                    <div class="signal-header">
+                        <div class="signal-symbol">SOLUSDT</div>
+                        <div class="signal-badge win">WIN</div>
+                    </div>
+                    
+                    <div class="signal-details">
+                        <div class="signal-detail">
+                            <div class="signal-detail-label">Side</div>
+                            <div class="signal-detail-value">LONG</div>
+                        </div>
+                        <div class="signal-detail">
+                            <div class="signal-detail-label">Leverage</div>
+                            <div class="signal-detail-value">15x</div>
+                        </div>
+                        <div class="signal-detail">
+                            <div class="signal-detail-label">Entry</div>
+                            <div class="signal-detail-value">220.000000</div>
+                        </div>
+                        <div class="signal-detail">
+                            <div class="signal-detail-label">Take Profit</div>
+                            <div class="signal-detail-value">225.5000</div>
+                        </div>
+                        <div class="signal-detail">
+                            <div class="signal-detail-label">Stop Loss</div>
+                            <div class="signal-detail-value">213.0000</div>
+                        </div>
+                    </div>
+                    
+                    <div class="signal-pnl positive">
+                        PnL: +37.50%
+                    </div>
+                    
+                    <div class="signal-footer">
+                        <span>📡 KRİPTO KAMPI - ASLA PARA İSTEM</span>
+                        <span>🕐 2025-10-10T11:07</span>
+                    </div>
+                </div>
+
+                <div class="signal-card win">
+                    <div class="signal-header">
+                        <div class="signal-symbol">SOLUSDT</div>
+                        <div class="signal-badge win">WIN</div>
+                    </div>
+                    
+                    <div class="signal-details">
+                        <div class="signal-detail">
+                            <div class="signal-detail-label">Side</div>
+                            <div class="signal-detail-value">LONG</div>
+                        </div>
+                        <div class="signal-detail">
+                            <div class="signal-detail-label">Leverage</div>
+                            <div class="signal-detail-value">15x</div>
+                        </div>
+                        <div class="signal-detail">
+                            <div class="signal-detail-label">Entry</div>
+                            <div class="signal-detail-value">220.000000</div>
+                        </div>
+                        <div class="signal-detail">
+                            <div class="signal-detail-label">Take Profit</div>
+                            <div class="signal-detail-value">225.5000</div>
+                        </div>
+                        <div class="signal-detail">
+                            <div class="signal-detail-label">Stop Loss</div>
+                            <div class="signal-detail-value">213.0000</div>
+                        </div>
+                    </div>
+                    
+                    <div class="signal-pnl positive">
+                        PnL: +37.50%
+                    </div>
+                    
+                    <div class="signal-footer">
+                        <span>📡 KRİPTO KAMPI - ÜCRETSİZ İŞLEM"</span>
+                        <span>🕐 2025-10-10T11:07</span>
+                    </div>
+                </div>
+
+                <div class="signal-card win">
+                    <div class="signal-header">
+                        <div class="signal-symbol">LINKUSDT</div>
+                        <div class="signal-badge win">WIN</div>
+                    </div>
+                    
+                    <div class="signal-details">
+                        <div class="signal-detail">
+                            <div class="signal-detail-label">Side</div>
+                            <div class="signal-detail-value">LONG</div>
+                        </div>
+                        <div class="signal-detail">
+                            <div class="signal-detail-label">Leverage</div>
+                            <div class="signal-detail-value">15x</div>
+                        </div>
+                        <div class="signal-detail">
+                            <div class="signal-detail-label">Entry</div>
+                            <div class="signal-detail-value">21.450000</div>
+                        </div>
+                        <div class="signal-detail">
+                            <div class="signal-detail-label">Take Profit</div>
+                            <div class="signal-detail-value">21.9500</div>
+                        </div>
+                        <div class="signal-detail">
+                            <div class="signal-detail-label">Stop Loss</div>
+                            <div class="signal-detail-value">21.2000</div>
+                        </div>
+                    </div>
+                    
+                    <div class="signal-pnl positive">
+                        PnL: +34.97%
+                    </div>
+                    
+                    <div class="signal-footer">
+                        <span>📡 KRİPTO KAMPI - ASLA PARA İSTEM</span>
+                        <span>🕐 2025-10-09T16:32</span>
+                    </div>
+                </div>
+
+                <div class="signal-card win">
+                    <div class="signal-header">
+                        <div class="signal-symbol">LINKUSDT</div>
+                        <div class="signal-badge win">WIN</div>
+                    </div>
+                    
+                    <div class="signal-details">
+                        <div class="signal-detail">
+                            <div class="signal-detail-label">Side</div>
+                            <div class="signal-detail-value">LONG</div>
+                        </div>
+                        <div class="signal-detail">
+                            <div class="signal-detail-label">Leverage</div>
+                            <div class="signal-detail-value">15x</div>
+                        </div>
+                        <div class="signal-detail">
+                            <div class="signal-detail-label">Entry</div>
+                            <div class="signal-detail-value">21.450000</div>
+                        </div>
+                        <div class="signal-detail">
+                            <div class="signal-detail-label">Take Profit</div>
+                            <div class="signal-detail-value">21.9500</div>
+                        </div>
+                        <div class="signal-detail">
+                            <div class="signal-detail-label">Stop Loss</div>
+                            <div class="signal-detail-value">21.2000</div>
+                        </div>
+                    </div>
+                    
+                    <div class="signal-pnl positive">
+                        PnL: +34.97%
+                    </div>
+                    
+                    <div class="signal-footer">
+                        <span>📡 KRİPTO KAMPI - ÜCRETSİZ İŞLEM"</span>
+                        <span>🕐 2025-10-09T16:32</span>
+                    </div>
+                </div>
+
+                <div class="signal-card win">
+                    <div class="signal-header">
+                        <div class="signal-symbol">TONUSDT</div>
+                        <div class="signal-badge win">WIN</div>
+                    </div>
+                    
+                    <div class="signal-details">
+                        <div class="signal-detail">
+                            <div class="signal-detail-label">Side</div>
+                            <div class="signal-detail-value">LONG</div>
+                        </div>
+                        <div class="signal-detail">
+                            <div class="signal-detail-label">Leverage</div>
+                            <div class="signal-detail-value">15x</div>
+                        </div>
+                        <div class="signal-detail">
+                            <div class="signal-detail-label">Entry</div>
+                            <div class="signal-detail-value">2.720000</div>
+                        </div>
+                        <div class="signal-detail">
+                            <div class="signal-detail-label">Take Profit</div>
+                            <div class="signal-detail-value">2.7850</div>
+                        </div>
+                        <div class="signal-detail">
+                            <div class="signal-detail-label">Stop Loss</div>
+                            <div class="signal-detail-value">2.6800</div>
+                        </div>
+                    </div>
+                    
+                    <div class="signal-pnl positive">
+                        PnL: +35.85%
+                    </div>
+                    
+                    <div class="signal-footer">
+                        <span>📡 KRİPTO KAMPI - ASLA PARA İSTEM</span>
+                        <span>🕐 2025-10-08T16:15</span>
+                    </div>
+                </div>
+
+                <div class="signal-card win">
+                    <div class="signal-header">
+                        <div class="signal-symbol">TONUSDT</div>
+                        <div class="signal-badge win">WIN</div>
+                    </div>
+                    
+                    <div class="signal-details">
+                        <div class="signal-detail">
+                            <div class="signal-detail-label">Side</div>
+                            <div class="signal-detail-value">LONG</div>
+                        </div>
+                        <div class="signal-detail">
+                            <div class="signal-detail-label">Leverage</div>
+                            <div class="signal-detail-value">15x</div>
+                        </div>
+                        <div class="signal-detail">
+                            <div class="signal-detail-label">Entry</div>
+                            <div class="signal-detail-value">2.720000</div>
+                        </div>
+                        <div class="signal-detail">
+                            <div class="signal-detail-label">Take Profit</div>
+                            <div class="signal-detail-value">2.7850</div>
+                        </div>
+                        <div class="signal-detail">
+                            <div class="signal-detail-label">Stop Loss</div>
+                            <div class="signal-detail-value">2.6800</div>
+                        </div>
+                    </div>
+                    
+                    <div class="signal-pnl positive">
+                        PnL: +35.85%
+                    </div>
+                    
+                    <div class="signal-footer">
+                        <span>📡 KRİPTO KAMPI - ÜCRETSİZ İŞLEM"</span>
+                        <span>🕐 2025-10-08T16:15</span>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+        
+        <div class="footer">
+            <h3>🚀 OMNI Tech Solutions</h3>
+            <p><strong>Telegram Trading Bot</strong> - Gelişmiş Backtest Analiz Sistemi</p>
+            <p>Adaptive Whitelist • Enhanced Parser • MEXC Exchange</p>
+            <p>📊 329 sinyal analiz edildi • 13 kanal izlendi</p>
+            <p style="margin-top: 20px; opacity: 0.8;">Oluşturulma: 16.10.2025 18:17:00</p>
+        </div>
+    </div>
+</body>
+</html>

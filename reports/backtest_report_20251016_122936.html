@@ -1,0 +1,886 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Backtest Raporu - 20251016_122936</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+            color: #333;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 40px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-size: 2.8em;
+            margin-bottom: 10px;
+            font-weight: 700;
+        }
+        
+        .header p {
+            font-size: 1.2em;
+            opacity: 0.9;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            padding: 40px;
+            background: #f8f9fa;
+        }
+        
+        .stat-card {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease;
+        }
+        
+        .stat-card:hover { transform: translateY(-5px); }
+        
+        .stat-card h3 {
+            color: #667eea;
+            font-size: 0.9em;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 10px;
+        }
+        
+        .stat-card .value {
+            font-size: 2.5em;
+            font-weight: 700;
+            color: #333;
+            margin-bottom: 5px;
+        }
+        
+        .stat-card .label {
+            color: #666;
+            font-size: 0.9em;
+        }
+        
+        .stat-card.win { border-left: 5px solid #10b981; }
+        .stat-card.loss { border-left: 5px solid #ef4444; }
+        .stat-card.open { border-left: 5px solid #f59e0b; }
+        .stat-card.winrate { border-left: 5px solid #667eea; }
+        
+        .section {
+            padding: 40px;
+            border-bottom: 1px solid #e9ecef;
+        }
+        
+        .section:last-child { border-bottom: none; }
+        
+        .section h2 {
+            font-size: 1.8em;
+            color: #333;
+            margin-bottom: 25px;
+            padding-bottom: 10px;
+            border-bottom: 3px solid #667eea;
+        }
+        
+        .bar-chart {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        
+        .bar-item {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        .bar-label {
+            min-width: 120px;
+            font-weight: 600;
+            color: #333;
+            font-size: 0.95em;
+        }
+        
+        .bar-container {
+            flex: 1;
+            background: #e9ecef;
+            border-radius: 10px;
+            height: 35px;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            padding-right: 12px;
+            color: white;
+            font-weight: 600;
+            font-size: 0.9em;
+        }
+        
+        .signal-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 20px;
+        }
+        
+        .signal-card {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            border-left: 4px solid #667eea;
+        }
+        
+        .signal-card.win { border-left-color: #10b981; background: #f0fdf4; }
+        .signal-card.loss { border-left-color: #ef4444; background: #fef2f2; }
+        .signal-card.open { border-left-color: #f59e0b; background: #fffbeb; }
+        
+        .signal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+        
+        .signal-symbol {
+            font-size: 1.2em;
+            font-weight: 700;
+            color: #333;
+        }
+        
+        .signal-outcome {
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-weight: 600;
+            font-size: 0.85em;
+            text-transform: uppercase;
+        }
+        
+        .signal-outcome.win { background: #10b981; color: white; }
+        .signal-outcome.loss { background: #ef4444; color: white; }
+        .signal-outcome.open { background: #f59e0b; color: white; }
+        
+        .signal-details {
+            font-size: 0.9em;
+            color: #666;
+            line-height: 1.6;
+        }
+        
+        .signal-details strong { color: #333; }
+        
+        .footer {
+            background: #f8f9fa;
+            padding: 30px;
+            text-align: center;
+            color: #666;
+        }
+        
+        @media (max-width: 768px) {
+            .stats-grid { grid-template-columns: 1fr; }
+            .signal-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📊 Backtest Analiz Raporu</h1>
+            <p>16 October 2025, 12:29</p>
+            <p style="margin-top: 10px; font-size: 0.95em;">93 Telegram Kanalı • 74,163 Mesaj • 329 Sinyal</p>
+        </div>
+        
+        <div class="stats-grid">
+            <div class="stat-card">
+                <h3>Toplam Sinyal</h3>
+                <div class="value">329</div>
+                <div class="label">Test edilen</div>
+            </div>
+            
+            <div class="stat-card win">
+                <h3>✅ Kazanan</h3>
+                <div class="value">136</div>
+                <div class="label">41.3% başarı</div>
+            </div>
+            
+            <div class="stat-card loss">
+                <h3>❌ Kaybeden</h3>
+                <div class="value">136</div>
+                <div class="label">41.3% kayıp</div>
+            </div>
+            
+            <div class="stat-card open">
+                <h3>⏳ Açık</h3>
+                <div class="value">51</div>
+                <div class="label">15.5% beklemede</div>
+            </div>
+            
+            <div class="stat-card winrate">
+                <h3>📈 Win Rate</h3>
+                <div class="value">50.0%</div>
+                <div class="label">Başarı oranı</div>
+            </div>
+        </div>
+        
+        <div class="section">
+            <h2>📈 En Çok Test Edilen Coinler</h2>
+            <div class="bar-chart">
+
+                <div class="bar-item">
+                    <div class="bar-label">ETHUSDT</div>
+                    <div class="bar-container">
+                        <div class="bar-fill" style="width: 100.0%">64 sinyal</div>
+                    </div>
+                </div>
+
+                <div class="bar-item">
+                    <div class="bar-label">AVAXUSDT</div>
+                    <div class="bar-container">
+                        <div class="bar-fill" style="width: 57.8125%">37 sinyal</div>
+                    </div>
+                </div>
+
+                <div class="bar-item">
+                    <div class="bar-label">SOLUSDT</div>
+                    <div class="bar-container">
+                        <div class="bar-fill" style="width: 54.6875%">35 sinyal</div>
+                    </div>
+                </div>
+
+                <div class="bar-item">
+                    <div class="bar-label">BTCUSDT</div>
+                    <div class="bar-container">
+                        <div class="bar-fill" style="width: 37.5%">24 sinyal</div>
+                    </div>
+                </div>
+
+                <div class="bar-item">
+                    <div class="bar-label">LTCUSDT</div>
+                    <div class="bar-container">
+                        <div class="bar-fill" style="width: 20.3125%">13 sinyal</div>
+                    </div>
+                </div>
+
+                <div class="bar-item">
+                    <div class="bar-label">XRPUSDT</div>
+                    <div class="bar-container">
+                        <div class="bar-fill" style="width: 17.1875%">11 sinyal</div>
+                    </div>
+                </div>
+
+                <div class="bar-item">
+                    <div class="bar-label">ADAUSDT</div>
+                    <div class="bar-container">
+                        <div class="bar-fill" style="width: 14.0625%">9 sinyal</div>
+                    </div>
+                </div>
+
+                <div class="bar-item">
+                    <div class="bar-label">LINKUSDT</div>
+                    <div class="bar-container">
+                        <div class="bar-fill" style="width: 10.9375%">7 sinyal</div>
+                    </div>
+                </div>
+
+                <div class="bar-item">
+                    <div class="bar-label">BNBUSDT</div>
+                    <div class="bar-container">
+                        <div class="bar-fill" style="width: 9.375%">6 sinyal</div>
+                    </div>
+                </div>
+
+                <div class="bar-item">
+                    <div class="bar-label">SUIUSDT</div>
+                    <div class="bar-container">
+                        <div class="bar-fill" style="width: 9.375%">6 sinyal</div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+        
+        <div class="section">
+            <h2>📊 Yön Dağılımı</h2>
+            <div class="bar-chart">
+
+                <div class="bar-item">
+                    <div class="bar-label">LONG</div>
+                    <div class="bar-container">
+                        <div class="bar-fill" style="width: 79.33130699088146%">261 (79.3%)</div>
+                    </div>
+                </div>
+
+                <div class="bar-item">
+                    <div class="bar-label">SHORT</div>
+                    <div class="bar-container">
+                        <div class="bar-fill" style="width: 20.66869300911854%">68 (20.7%)</div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+        
+        <div class="section">
+            <h2>📱 En Aktif Kanallar</h2>
+            <div class="bar-chart">
+
+                <div class="bar-item">
+                    <div class="bar-label" title="Coin Signals">Coin Signals</div>
+                    <div class="bar-container">
+                        <div class="bar-fill" style="width: 100.0%">108</div>
+                    </div>
+                </div>
+
+                <div class="bar-item">
+                    <div class="bar-label" title="KRİPTO KAMPI - ÜCRETSİZ İŞLEM"">KRİPTO KAMPI - ÜCRETSİZ İŞLEM"</div>
+                    <div class="bar-container">
+                        <div class="bar-fill" style="width: 92.5925925925926%">100</div>
+                    </div>
+                </div>
+
+                <div class="bar-item">
+                    <div class="bar-label" title="KRİPTO KAMPI - ASLA PARA İSTEMEZ">KRİPTO KAMPI - ASLA PARA İSTEM...</div>
+                    <div class="bar-container">
+                        <div class="bar-fill" style="width: 38.88888888888889%">42</div>
+                    </div>
+                </div>
+
+                <div class="bar-item">
+                    <div class="bar-label" title="Binance signals">Binance signals</div>
+                    <div class="bar-container">
+                        <div class="bar-fill" style="width: 24.074074074074073%">26</div>
+                    </div>
+                </div>
+
+                <div class="bar-item">
+                    <div class="bar-label" title="Halil Güneş’linin Kripto Kanalı">Halil Güneş’linin Kripto Kanal...</div>
+                    <div class="bar-container">
+                        <div class="bar-fill" style="width: 22.22222222222222%">24</div>
+                    </div>
+                </div>
+
+                <div class="bar-item">
+                    <div class="bar-label" title="Benz Crypto💵">Benz Crypto💵</div>
+                    <div class="bar-container">
+                        <div class="bar-fill" style="width: 7.4074074074074066%">8</div>
+                    </div>
+                </div>
+
+                <div class="bar-item">
+                    <div class="bar-label" title="Crypto Inner Circle®">Crypto Inner Circle®</div>
+                    <div class="bar-container">
+                        <div class="bar-fill" style="width: 5.555555555555555%">6</div>
+                    </div>
+                </div>
+
+                <div class="bar-item">
+                    <div class="bar-label" title="Kripto Simpsons">Kripto Simpsons</div>
+                    <div class="bar-container">
+                        <div class="bar-fill" style="width: 5.555555555555555%">6</div>
+                    </div>
+                </div>
+
+                <div class="bar-item">
+                    <div class="bar-label" title="Fat Pig Signals ®">Fat Pig Signals ®</div>
+                    <div class="bar-container">
+                        <div class="bar-fill" style="width: 2.7777777777777777%">3</div>
+                    </div>
+                </div>
+
+                <div class="bar-item">
+                    <div class="bar-label" title="Kripto Delisi | VİP 💰">Kripto Delisi | VİP 💰</div>
+                    <div class="bar-container">
+                        <div class="bar-fill" style="width: 2.7777777777777777%">3</div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+        
+        <div class="section">
+            <h2>🎯 Sinyal Detayları (Son 30)</h2>
+            <div class="signal-grid">
+
+                <div class="signal-card loss">
+                    <div class="signal-header">
+                        <div class="signal-symbol">INJUSDT</div>
+                        <div class="signal-outcome loss">LOSS</div>
+                    </div>
+                    <div class="signal-details">
+                        <strong>Yön:</strong> LONG<br>
+                        <strong>Entry:</strong> 9.09<br>
+                        <strong>TP:</strong> 9.399999999999999<br>
+                        <strong>SL:</strong> 8.85<br>
+                        <strong>Kaldıraç:</strong> nanx<br>
+                        <strong>Kanal:</strong> KRİPTO KAMPI - ASLA PARA 
+                    </div>
+                </div>
+
+                <div class="signal-card loss">
+                    <div class="signal-header">
+                        <div class="signal-symbol">INJUSDT</div>
+                        <div class="signal-outcome loss">LOSS</div>
+                    </div>
+                    <div class="signal-details">
+                        <strong>Yön:</strong> LONG<br>
+                        <strong>Entry:</strong> 9.09<br>
+                        <strong>TP:</strong> 9.399999999999999<br>
+                        <strong>SL:</strong> 8.85<br>
+                        <strong>Kaldıraç:</strong> nanx<br>
+                        <strong>Kanal:</strong> KRİPTO KAMPI - ÜCRETSİZ İ
+                    </div>
+                </div>
+
+                <div class="signal-card win">
+                    <div class="signal-header">
+                        <div class="signal-symbol">SOLUSDT</div>
+                        <div class="signal-outcome win">WIN</div>
+                    </div>
+                    <div class="signal-details">
+                        <strong>Yön:</strong> SHORT<br>
+                        <strong>Entry:</strong> 205.799375<br>
+                        <strong>TP:</strong> 198.4125<br>
+                        <strong>SL:</strong> 212.19484375<br>
+                        <strong>Kaldıraç:</strong> nanx<br>
+                        <strong>Kanal:</strong> Coin Signals
+                    </div>
+                </div>
+
+                <div class="signal-card win">
+                    <div class="signal-header">
+                        <div class="signal-symbol">PENGUUSDT</div>
+                        <div class="signal-outcome win">WIN</div>
+                    </div>
+                    <div class="signal-details">
+                        <strong>Yön:</strong> LONG<br>
+                        <strong>Entry:</strong> 0.0244<br>
+                        <strong>TP:</strong> 0.0259<br>
+                        <strong>SL:</strong> nan<br>
+                        <strong>Kaldıraç:</strong> 6.0x<br>
+                        <strong>Kanal:</strong> Kripto Simpsons
+                    </div>
+                </div>
+
+                <div class="signal-card win">
+                    <div class="signal-header">
+                        <div class="signal-symbol">TIAUSDT</div>
+                        <div class="signal-outcome win">WIN</div>
+                    </div>
+                    <div class="signal-details">
+                        <strong>Yön:</strong> LONG<br>
+                        <strong>Entry:</strong> 1.1<br>
+                        <strong>TP:</strong> 1.17<br>
+                        <strong>SL:</strong> nan<br>
+                        <strong>Kaldıraç:</strong> 7.0x<br>
+                        <strong>Kanal:</strong> Kripto Simpsons
+                    </div>
+                </div>
+
+                <div class="signal-card loss">
+                    <div class="signal-header">
+                        <div class="signal-symbol">ETHUSDT</div>
+                        <div class="signal-outcome loss">LOSS</div>
+                    </div>
+                    <div class="signal-details">
+                        <strong>Yön:</strong> LONG<br>
+                        <strong>Entry:</strong> 4016.0<br>
+                        <strong>TP:</strong> 4182.0<br>
+                        <strong>SL:</strong> 3908.275<br>
+                        <strong>Kaldıraç:</strong> nanx<br>
+                        <strong>Kanal:</strong> Coin Signals
+                    </div>
+                </div>
+
+                <div class="signal-card loss">
+                    <div class="signal-header">
+                        <div class="signal-symbol">LTCUSDT</div>
+                        <div class="signal-outcome loss">LOSS</div>
+                    </div>
+                    <div class="signal-details">
+                        <strong>Yön:</strong> LONG<br>
+                        <strong>Entry:</strong> 94.45500000000001<br>
+                        <strong>TP:</strong> 97.99<br>
+                        <strong>SL:</strong> 91.44875<br>
+                        <strong>Kaldıraç:</strong> nanx<br>
+                        <strong>Kanal:</strong> Coin Signals
+                    </div>
+                </div>
+
+                <div class="signal-card loss">
+                    <div class="signal-header">
+                        <div class="signal-symbol">XRPUSDT</div>
+                        <div class="signal-outcome loss">LOSS</div>
+                    </div>
+                    <div class="signal-details">
+                        <strong>Yön:</strong> LONG<br>
+                        <strong>Entry:</strong> 2.56<br>
+                        <strong>TP:</strong> 2.665<br>
+                        <strong>SL:</strong> 2.48<br>
+                        <strong>Kaldıraç:</strong> nanx<br>
+                        <strong>Kanal:</strong> KRİPTO KAMPI - ASLA PARA 
+                    </div>
+                </div>
+
+                <div class="signal-card loss">
+                    <div class="signal-header">
+                        <div class="signal-symbol">XRPUSDT</div>
+                        <div class="signal-outcome loss">LOSS</div>
+                    </div>
+                    <div class="signal-details">
+                        <strong>Yön:</strong> LONG<br>
+                        <strong>Entry:</strong> 2.56<br>
+                        <strong>TP:</strong> 2.665<br>
+                        <strong>SL:</strong> 2.48<br>
+                        <strong>Kaldıraç:</strong> nanx<br>
+                        <strong>Kanal:</strong> KRİPTO KAMPI - ÜCRETSİZ İ
+                    </div>
+                </div>
+
+                <div class="signal-card loss">
+                    <div class="signal-header">
+                        <div class="signal-symbol">AVAXUSDT</div>
+                        <div class="signal-outcome loss">LOSS</div>
+                    </div>
+                    <div class="signal-details">
+                        <strong>Yön:</strong> LONG<br>
+                        <strong>Entry:</strong> 22.25<br>
+                        <strong>TP:</strong> nan<br>
+                        <strong>SL:</strong> 21.4<br>
+                        <strong>Kaldıraç:</strong> nanx<br>
+                        <strong>Kanal:</strong> KRİPTO KAMPI - ASLA PARA 
+                    </div>
+                </div>
+
+                <div class="signal-card loss">
+                    <div class="signal-header">
+                        <div class="signal-symbol">AVAXUSDT</div>
+                        <div class="signal-outcome loss">LOSS</div>
+                    </div>
+                    <div class="signal-details">
+                        <strong>Yön:</strong> LONG<br>
+                        <strong>Entry:</strong> 22.25<br>
+                        <strong>TP:</strong> nan<br>
+                        <strong>SL:</strong> 21.4<br>
+                        <strong>Kaldıraç:</strong> nanx<br>
+                        <strong>Kanal:</strong> KRİPTO KAMPI - ÜCRETSİZ İ
+                    </div>
+                </div>
+
+                <div class="signal-card open">
+                    <div class="signal-header">
+                        <div class="signal-symbol">BONKUSDT</div>
+                        <div class="signal-outcome open">OPEN</div>
+                    </div>
+                    <div class="signal-details">
+                        <strong>Yön:</strong> LONG<br>
+                        <strong>Entry:</strong> 0.013483<br>
+                        <strong>TP:</strong> nan<br>
+                        <strong>SL:</strong> nan<br>
+                        <strong>Kaldıraç:</strong> 20.0x<br>
+                        <strong>Kanal:</strong> Crypto Devil® [ Private 🔒
+                    </div>
+                </div>
+
+                <div class="signal-card loss">
+                    <div class="signal-header">
+                        <div class="signal-symbol">ETHUSDT</div>
+                        <div class="signal-outcome loss">LOSS</div>
+                    </div>
+                    <div class="signal-details">
+                        <strong>Yön:</strong> LONG<br>
+                        <strong>Entry:</strong> 3752.0<br>
+                        <strong>TP:</strong> 3876.0<br>
+                        <strong>SL:</strong> 3636.76<br>
+                        <strong>Kaldıraç:</strong> nanx<br>
+                        <strong>Kanal:</strong> Coin Signals
+                    </div>
+                </div>
+
+                <div class="signal-card loss">
+                    <div class="signal-header">
+                        <div class="signal-symbol">SOLUSDT</div>
+                        <div class="signal-outcome loss">LOSS</div>
+                    </div>
+                    <div class="signal-details">
+                        <strong>Yön:</strong> LONG<br>
+                        <strong>Entry:</strong> 173.1844<br>
+                        <strong>TP:</strong> 180.5312<br>
+                        <strong>SL:</strong> 166.0039744<br>
+                        <strong>Kaldıraç:</strong> nanx<br>
+                        <strong>Kanal:</strong> Coin Signals
+                    </div>
+                </div>
+
+                <div class="signal-card loss">
+                    <div class="signal-header">
+                        <div class="signal-symbol">AVAXUSDT</div>
+                        <div class="signal-outcome loss">LOSS</div>
+                    </div>
+                    <div class="signal-details">
+                        <strong>Yön:</strong> LONG<br>
+                        <strong>Entry:</strong> 21.6<br>
+                        <strong>TP:</strong> 22.85<br>
+                        <strong>SL:</strong> 21.0<br>
+                        <strong>Kaldıraç:</strong> nanx<br>
+                        <strong>Kanal:</strong> KRİPTO KAMPI - ASLA PARA 
+                    </div>
+                </div>
+
+                <div class="signal-card loss">
+                    <div class="signal-header">
+                        <div class="signal-symbol">AVAXUSDT</div>
+                        <div class="signal-outcome loss">LOSS</div>
+                    </div>
+                    <div class="signal-details">
+                        <strong>Yön:</strong> LONG<br>
+                        <strong>Entry:</strong> 21.6<br>
+                        <strong>TP:</strong> 22.85<br>
+                        <strong>SL:</strong> 21.0<br>
+                        <strong>Kaldıraç:</strong> nanx<br>
+                        <strong>Kanal:</strong> KRİPTO KAMPI - ÜCRETSİZ İ
+                    </div>
+                </div>
+
+                <div class="signal-card win">
+                    <div class="signal-header">
+                        <div class="signal-symbol">LTCUSDT</div>
+                        <div class="signal-outcome win">WIN</div>
+                    </div>
+                    <div class="signal-details">
+                        <strong>Yön:</strong> SHORT<br>
+                        <strong>Entry:</strong> 134.75<br>
+                        <strong>TP:</strong> 128.7<br>
+                        <strong>SL:</strong> 139.99125<br>
+                        <strong>Kaldıraç:</strong> nanx<br>
+                        <strong>Kanal:</strong> Coin Signals
+                    </div>
+                </div>
+
+                <div class="signal-card win">
+                    <div class="signal-header">
+                        <div class="signal-symbol">DOGEUSDT</div>
+                        <div class="signal-outcome win">WIN</div>
+                    </div>
+                    <div class="signal-details">
+                        <strong>Yön:</strong> SHORT<br>
+                        <strong>Entry:</strong> 0.239<br>
+                        <strong>TP:</strong> 0.2273098<br>
+                        <strong>SL:</strong> 0.262609<br>
+                        <strong>Kaldıraç:</strong> nanx<br>
+                        <strong>Kanal:</strong> Coin Signals
+                    </div>
+                </div>
+
+                <div class="signal-card win">
+                    <div class="signal-header">
+                        <div class="signal-symbol">SOLUSDT</div>
+                        <div class="signal-outcome win">WIN</div>
+                    </div>
+                    <div class="signal-details">
+                        <strong>Yön:</strong> SHORT<br>
+                        <strong>Entry:</strong> 229.6<br>
+                        <strong>TP:</strong> 212.8<br>
+                        <strong>SL:</strong> 257.08<br>
+                        <strong>Kaldıraç:</strong> nanx<br>
+                        <strong>Kanal:</strong> Coin Signals
+                    </div>
+                </div>
+
+                <div class="signal-card win">
+                    <div class="signal-header">
+                        <div class="signal-symbol">XRPUSDT</div>
+                        <div class="signal-outcome win">WIN</div>
+                    </div>
+                    <div class="signal-details">
+                        <strong>Yön:</strong> SHORT<br>
+                        <strong>Entry:</strong> 2.7531049999999997<br>
+                        <strong>TP:</strong> 2.62579<br>
+                        <strong>SL:</strong> 2.93003315<br>
+                        <strong>Kaldıraç:</strong> nanx<br>
+                        <strong>Kanal:</strong> Coin Signals
+                    </div>
+                </div>
+
+                <div class="signal-card win">
+                    <div class="signal-header">
+                        <div class="signal-symbol">SUIUSDT</div>
+                        <div class="signal-outcome win">WIN</div>
+                    </div>
+                    <div class="signal-details">
+                        <strong>Yön:</strong> SHORT<br>
+                        <strong>Entry:</strong> 3.467625<br>
+                        <strong>TP:</strong> 3.32475<br>
+                        <strong>SL:</strong> 3.63894063<br>
+                        <strong>Kaldıraç:</strong> nanx<br>
+                        <strong>Kanal:</strong> Coin Signals
+                    </div>
+                </div>
+
+                <div class="signal-card loss">
+                    <div class="signal-header">
+                        <div class="signal-symbol">SOLUSDT</div>
+                        <div class="signal-outcome loss">LOSS</div>
+                    </div>
+                    <div class="signal-details">
+                        <strong>Yön:</strong> LONG<br>
+                        <strong>Entry:</strong> 185.0<br>
+                        <strong>TP:</strong> 200.0<br>
+                        <strong>SL:</strong> 178.0<br>
+                        <strong>Kaldıraç:</strong> 7.0x<br>
+                        <strong>Kanal:</strong> Kripto Simpsons
+                    </div>
+                </div>
+
+                <div class="signal-card loss">
+                    <div class="signal-header">
+                        <div class="signal-symbol">ETHUSDT</div>
+                        <div class="signal-outcome loss">LOSS</div>
+                    </div>
+                    <div class="signal-details">
+                        <strong>Yön:</strong> LONG<br>
+                        <strong>Entry:</strong> 4100.0<br>
+                        <strong>TP:</strong> 4210.0<br>
+                        <strong>SL:</strong> 4040.0<br>
+                        <strong>Kaldıraç:</strong> nanx<br>
+                        <strong>Kanal:</strong> KRİPTO KAMPI - ASLA PARA 
+                    </div>
+                </div>
+
+                <div class="signal-card loss">
+                    <div class="signal-header">
+                        <div class="signal-symbol">ETHUSDT</div>
+                        <div class="signal-outcome loss">LOSS</div>
+                    </div>
+                    <div class="signal-details">
+                        <strong>Yön:</strong> LONG<br>
+                        <strong>Entry:</strong> 4100.0<br>
+                        <strong>TP:</strong> 4210.0<br>
+                        <strong>SL:</strong> 4040.0<br>
+                        <strong>Kaldıraç:</strong> nanx<br>
+                        <strong>Kanal:</strong> KRİPTO KAMPI - ÜCRETSİZ İ
+                    </div>
+                </div>
+
+                <div class="signal-card win">
+                    <div class="signal-header">
+                        <div class="signal-symbol">SOLUSDT</div>
+                        <div class="signal-outcome win">WIN</div>
+                    </div>
+                    <div class="signal-details">
+                        <strong>Yön:</strong> LONG<br>
+                        <strong>Entry:</strong> 220.0<br>
+                        <strong>TP:</strong> 225.5<br>
+                        <strong>SL:</strong> 213.0<br>
+                        <strong>Kaldıraç:</strong> nanx<br>
+                        <strong>Kanal:</strong> KRİPTO KAMPI - ASLA PARA 
+                    </div>
+                </div>
+
+                <div class="signal-card win">
+                    <div class="signal-header">
+                        <div class="signal-symbol">SOLUSDT</div>
+                        <div class="signal-outcome win">WIN</div>
+                    </div>
+                    <div class="signal-details">
+                        <strong>Yön:</strong> LONG<br>
+                        <strong>Entry:</strong> 220.0<br>
+                        <strong>TP:</strong> 225.5<br>
+                        <strong>SL:</strong> 213.0<br>
+                        <strong>Kaldıraç:</strong> nanx<br>
+                        <strong>Kanal:</strong> KRİPTO KAMPI - ÜCRETSİZ İ
+                    </div>
+                </div>
+
+                <div class="signal-card win">
+                    <div class="signal-header">
+                        <div class="signal-symbol">LINKUSDT</div>
+                        <div class="signal-outcome win">WIN</div>
+                    </div>
+                    <div class="signal-details">
+                        <strong>Yön:</strong> LONG<br>
+                        <strong>Entry:</strong> 21.45<br>
+                        <strong>TP:</strong> 21.950000000000003<br>
+                        <strong>SL:</strong> 21.2<br>
+                        <strong>Kaldıraç:</strong> nanx<br>
+                        <strong>Kanal:</strong> KRİPTO KAMPI - ASLA PARA 
+                    </div>
+                </div>
+
+                <div class="signal-card win">
+                    <div class="signal-header">
+                        <div class="signal-symbol">LINKUSDT</div>
+                        <div class="signal-outcome win">WIN</div>
+                    </div>
+                    <div class="signal-details">
+                        <strong>Yön:</strong> LONG<br>
+                        <strong>Entry:</strong> 21.45<br>
+                        <strong>TP:</strong> 21.950000000000003<br>
+                        <strong>SL:</strong> 21.2<br>
+                        <strong>Kaldıraç:</strong> nanx<br>
+                        <strong>Kanal:</strong> KRİPTO KAMPI - ÜCRETSİZ İ
+                    </div>
+                </div>
+
+                <div class="signal-card win">
+                    <div class="signal-header">
+                        <div class="signal-symbol">TONUSDT</div>
+                        <div class="signal-outcome win">WIN</div>
+                    </div>
+                    <div class="signal-details">
+                        <strong>Yön:</strong> LONG<br>
+                        <strong>Entry:</strong> 2.72<br>
+                        <strong>TP:</strong> 2.785<br>
+                        <strong>SL:</strong> 2.68<br>
+                        <strong>Kaldıraç:</strong> nanx<br>
+                        <strong>Kanal:</strong> KRİPTO KAMPI - ASLA PARA 
+                    </div>
+                </div>
+
+                <div class="signal-card win">
+                    <div class="signal-header">
+                        <div class="signal-symbol">TONUSDT</div>
+                        <div class="signal-outcome win">WIN</div>
+                    </div>
+                    <div class="signal-details">
+                        <strong>Yön:</strong> LONG<br>
+                        <strong>Entry:</strong> 2.72<br>
+                        <strong>TP:</strong> 2.785<br>
+                        <strong>SL:</strong> 2.68<br>
+                        <strong>Kaldıraç:</strong> nanx<br>
+                        <strong>Kanal:</strong> KRİPTO KAMPI - ÜCRETSİZ İ
+                    </div>
+                </div>
+
+            </div>
+        </div>
+        
+        <div class="footer">
+            <p><strong>OMNI Tech Solutions</strong> - Telegram Trading Bot</p>
+            <p>Adaptive Whitelist Parser • Enhanced Signal Analysis • MEXC Backtest</p>
+            <p>Oluşturulma: 16.10.2025 12:29:36</p>
+        </div>
+    </div>
+</body>
+</html>
