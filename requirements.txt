@@ -10,12 +10,21 @@ python-dotenv==1.0.1
 # Exchange API
 ccxt==4.5.10
 
+# AI/LLM Integration
+openai>=1.12.0
+
 # Data processing (updated for Python 3.14 compatibility)
 pandas>=2.2.3
 numpy>=1.26.4
 
 # Data Validation
 pydantic==2.12.0
+
+# AI/LLM Integration
+openai>=1.12.0
+
+# Async HTTP for notifications
+aiohttp>=3.9.0
 
 # Logging & Display
 rich==13.7.1

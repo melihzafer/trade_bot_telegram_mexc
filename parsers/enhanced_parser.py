@@ -2,8 +2,14 @@
 Enhanced Signal Parser with Confidence Scoring & Adaptive Whitelist
 Supports TR/EN mixed signals with ML-inspired pattern learning.
 
+🧠 NEURO-SYMBOLIC HYBRID ARCHITECTURE (Project Chimera)
+- Fast Path: Whitelist lookup (cached patterns)
+- Symbolic Path: Regex-based parsing (rule-based)
+- Neural Path: AI-powered parsing (DeepSeek R1)
+
 Author: OMNI Tech Solutions
 Created: 2025
+Updated: 2025 (Chimera Integration)
 """
 
 import re
@@ -12,6 +18,12 @@ from dataclasses import dataclass, field, asdict
 from datetime import datetime, timezone
 from parsers.number_normalizer import normalize_number, normalize_number_list, parse_tp_sequence, clean_text
 from utils.whitelist_manager import WhitelistManager
+
+try:
+    from utils import logger
+except ImportError:
+    import logging
+    logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -78,14 +90,17 @@ class EnhancedParser:
         re.IGNORECASE
     )
     
-    # TR/EN keywords (non-capturing groups)
-    LONG_KEYWORDS = r'(?i)\b(?:long|buy|al|alım|giriş)\b'
-    SHORT_KEYWORDS = r'(?i)\b(?:short|sell|sat|satış|kısa)\b'
+    # TR/EN keywords (non-capturing groups) - ENHANCED WITH TURKISH FORMATS
+    LONG_KEYWORDS = r'(?i)\b(?:long|buy|al|alım|giriş|işlem\s*türü:\s*long|yön:\s*long)\b'
+    SHORT_KEYWORDS = r'(?i)\b(?:short|sell|sat|satış|kısa|işlem\s*türü:\s*short|yön:\s*short)\b'
     
-    ENTRY_KEYWORDS = r'(?i)\b(?:entry|giriş|buy|alım|long\s*entry|short\s*entry)\b'
-    TP_KEYWORDS = r'(?i)\b(?:tp\d*|take\s*profit|hedef\d*|targets?|sell)\b'
-    SL_KEYWORDS = r'(?i)\b(?:sl|stop|stoploss|stop\s*loss|zarar\s*durdur)\b'
+    ENTRY_KEYWORDS = r'(?i)\b(?:entry|giriş|giriş\s*bölgesi|buy|alım|long\s*entry|short\s*entry)\b'
+    TP_KEYWORDS = r'(?i)\b(?:tp\d*|take\s*profit|hedef\d*|hedefler|targets?|sell)\b'
+    SL_KEYWORDS = r'(?i)\b(?:sl|stop|stoploss|stop\s*loss|zarar\s*durdur|zarar\s*kes)\b'
     LEVERAGE_KEYWORDS = r'(?i)\b(?:lev|leverage|kaldıraç|(\d{1,3})x)\b'
+    
+    # Turkish-specific symbol keywords for better detection
+    SYMBOL_KEYWORDS = r'(?i)\b(?:coin\s*adı|coin\s*adi|sembol|symbol|pair|çift)\b'
     
     # Common garbage symbols to reject
     BLACKLIST = {
@@ -128,37 +143,159 @@ class EnhancedParser:
         'kamikaze', 'vine', 'zora',
     }
     
-    def __init__(self):
-        """Initialize parser with whitelist."""
+    def __init__(self, enable_ai: bool = True):
+        """
+        Initialize parser with whitelist and AI fallback.
+        
+        Args:
+            enable_ai: Enable AI parser for low-confidence signals (default: True)
+        """
         self.whitelist = WhitelistManager()
         self.fast_path_hits = 0
+        self.regex_path_hits = 0
+        self.ai_path_hits = 0
         self.full_parse_count = 0
-    
-    def parse(self, text: str) -> ParsedSignal:
-        """
-        Parse trading signal from text with adaptive whitelist fast-path.
         
-        Flow:
-        1. Check whitelist for known pattern → fast path
-        2. If miss → full validation → learn on success
+        # Initialize AI parser (lazy loading to avoid import errors)
+        self.ai_parser = None
+        self.enable_ai = enable_ai
+        
+        if enable_ai:
+            try:
+                from parsers.ai_parser import AIParser
+                self.ai_parser = AIParser()
+                logger.info("🧠 AI Parser enabled (Neuro-Symbolic mode)")
+            except Exception as e:
+                logger.warn(f"⚠️  AI Parser initialization failed: {e}")
+                logger.warn("Falling back to Regex-only mode")
+                self.enable_ai = False
+    
+    async def parse(self, text: str, confidence_threshold: float = 0.75) -> ParsedSignal:
+        """
+        Parse trading signal using Hybrid Neuro-Symbolic Architecture.
+        
+        🏗️ ARCHITECTURE (3-Tier Routing):
+        
+        Tier 1 (⚡ FAST PATH): Check whitelist for known pattern
+        ├─ If hit → Return cached result (ultra-fast, no validation)
+        └─ If miss → Continue to Tier 2
+        
+        Tier 2 (🦁 REGEX PATH): Rule-based parsing
+        ├─ If confidence >= 0.85 → Return regex result (trust symbolic logic)
+        └─ If confidence < 0.85 → Continue to Tier 3
+        
+        Tier 3 (🧠 AI PATH): Neural network fallback
+        ├─ Call DeepSeek R1 for complex/ambiguous signals
+        ├─ If AI succeeds → Return AI result (neural override)
+        └─ If AI fails → Return low-confidence regex result (best effort)
         
         Args:
             text: Raw signal text (TR/EN mixed)
+            confidence_threshold: Threshold to trigger AI fallback (default: 0.75)
         
         Returns:
-            ParsedSignal with confidence score
+            ParsedSignal with confidence score and routing metadata
         """
-        # FAST PATH: Check whitelist for known pattern
+        # ============================================================
+        # TIER 1: FAST PATH (Whitelist Lookup)
+        # ============================================================
         whitelist_entry = self.whitelist.lookup(text)
         
         if whitelist_entry:
-            # Fast path: use cached extraction
             self.fast_path_hits += 1
-            return self._fast_parse(text, whitelist_entry)
+            logger.debug("⚡ Fast Path: Whitelist hit")
+            signal = self._fast_parse(text, whitelist_entry)
+            signal.parsing_notes.append("🔥 Routing: Fast Path (Whitelist)")
+            return signal
         
-        # FULL PARSE: Standard validation
+        # ============================================================
+        # TIER 2: REGEX PATH (Rule-Based Parsing)
+        # ============================================================
         self.full_parse_count += 1
         
+        # Run full regex-based extraction
+        regex_signal = await self._full_regex_parse(text)
+        
+        # Check confidence threshold
+        if regex_signal.confidence >= confidence_threshold:
+            self.regex_path_hits += 1
+            logger.info(f"🦁 Regex Path: High confidence ({regex_signal.confidence:.2f}) - Symbol: {regex_signal.symbol}")
+            regex_signal.parsing_notes.append(f"🦁 Routing: Regex Path (Confidence: {regex_signal.confidence:.2f})")
+            
+            # LEARN: Add successful parse to whitelist
+            if regex_signal.symbol and regex_signal.confidence >= 0.6:
+                self.whitelist.add(
+                    text=text,
+                    symbol=regex_signal.symbol,
+                    entries=regex_signal.entries,
+                    tps=regex_signal.tps,
+                    sl=regex_signal.sl,
+                    leverage=regex_signal.leverage_x,
+                    language=regex_signal.locale
+                )
+            
+            return regex_signal
+        
+        # ============================================================
+        # TIER 3: AI PATH (Neural Fallback)
+        # ============================================================
+        if self.enable_ai and self.ai_parser:
+            logger.info(f"🧠 AI Path: Low confidence ({regex_signal.confidence:.2f}) - Calling AI Parser...")
+            
+            try:
+                ai_result = await self.ai_parser.parse_signal(text)
+                
+                # Check if AI successfully parsed the signal
+                if ai_result.get("signal") is not False:
+                    self.ai_path_hits += 1
+                    
+                    # Convert AI result to ParsedSignal
+                    ai_signal = self._convert_ai_to_parsed_signal(text, ai_result)
+                    
+                    logger.success(f"🧠 AI Path: Successfully parsed {ai_signal.symbol} {ai_signal.side} (Confidence: {ai_signal.confidence:.2f})")
+                    ai_signal.parsing_notes.append(f"🧠 Routing: AI Path (Regex confidence too low: {regex_signal.confidence:.2f})")
+                    
+                    # LEARN: Add AI-parsed signal to whitelist
+                    if ai_signal.symbol and ai_signal.confidence >= 0.6:
+                        self.whitelist.add(
+                            text=text,
+                            symbol=ai_signal.symbol,
+                            entries=ai_signal.entries,
+                            tps=ai_signal.tps,
+                            sl=ai_signal.sl,
+                            leverage=ai_signal.leverage_x,
+                            language=ai_signal.locale
+                        )
+                    
+                    return ai_signal
+                else:
+                    # AI couldn't parse it either
+                    error_msg = ai_result.get("error", "Unknown")
+                    logger.warn(f"🧠 AI Path: Failed to parse - {error_msg}")
+                    regex_signal.parsing_notes.append(f"🧠 AI Path attempted but failed: {error_msg}")
+            
+            except Exception as e:
+                logger.error(f"🧠 AI Path: Exception - {type(e).__name__}: {e}")
+                regex_signal.parsing_notes.append(f"🧠 AI Path error: {str(e)}")
+        else:
+            # AI disabled or not available
+            logger.debug("🧠 AI Path: Disabled or unavailable")
+            regex_signal.parsing_notes.append("🧠 AI Path: Disabled")
+        
+        # ============================================================
+        # FALLBACK: Return low-confidence regex result
+        # ============================================================
+        logger.warn(f"⚠️  Fallback: Returning low-confidence regex result ({regex_signal.confidence:.2f})")
+        regex_signal.parsing_notes.append(f"⚠️  Routing: Fallback (Low confidence: {regex_signal.confidence:.2f})")
+        return regex_signal
+    
+    async def _full_regex_parse(self, text: str) -> ParsedSignal:
+        """
+        Full regex-based parsing (legacy logic, now async-compatible).
+        
+        This is the original rule-based parser extracted into a separate method
+        to support the hybrid architecture.
+        """
         signal = ParsedSignal(raw_text=text)
         
         # Clean text (remove URLs, emojis, extra whitespace)
@@ -167,7 +304,14 @@ class EnhancedParser:
         # Detect locale (TR vs EN vs mixed)
         signal.locale = self._detect_locale(cleaned)
         
-        # Extract fields
+        # Try Turkish format first (if detected as Turkish)
+        if signal.locale in ["tr", "mixed"]:
+            turkish_signal = self._parse_turkish_format(text, signal)
+            if turkish_signal and turkish_signal.confidence >= 0.8:
+                logger.info(f"🇹🇷 Turkish Format Parser: High confidence ({turkish_signal.confidence:.2f})")
+                return turkish_signal
+        
+        # Extract fields using standard regex patterns
         signal.symbol = self._extract_symbol(cleaned, signal)
         signal.side = self._extract_side(cleaned, signal)
         signal.leverage_x = self._extract_leverage(cleaned, signal)
@@ -179,17 +323,114 @@ class EnhancedParser:
         # Calculate confidence score
         signal.confidence = self._calculate_confidence(signal)
         
-        # LEARN: Add successful parse to whitelist
-        if signal.symbol and signal.confidence >= 0.6:
-            self.whitelist.add(
-                text=text,
-                symbol=signal.symbol,
-                entries=signal.entries,
-                tps=signal.tps,
-                sl=signal.sl,
-                leverage=signal.leverage_x,
-                language=signal.locale
-            )
+        return signal
+    
+    def _parse_turkish_format(self, text: str, base_signal: ParsedSignal) -> Optional[ParsedSignal]:
+        """
+        Dedicated parser for Turkish signal format.
+        
+        Expected format:
+        📊 İŞLEM TÜRÜ: LONG
+        COİN ADI: ZEC/USDT
+        ✅ Giriş Bölgesi: 366.7 - 356
+        ⚡️ Hedefler: 375 - 379.6 - 385
+        
+        Returns:
+            ParsedSignal if successfully parsed, None otherwise
+        """
+        signal = ParsedSignal(raw_text=text)
+        signal.locale = "tr"
+        
+        # Extract Side (İŞLEM TÜRÜ or YÖN)
+        side_pattern = r'(?:İŞLEM\s*TÜRÜ|YÖN)\s*:\s*(LONG|SHORT)'
+        side_match = re.search(side_pattern, text, re.IGNORECASE)
+        if side_match:
+            signal.side = side_match.group(1).lower()
+            signal.parsing_notes.append(f"Turkish Side: {signal.side}")
+        
+        # Extract Symbol (COİN ADI or SEMBOL)
+        symbol_pattern = r'(?:COİN\s*AD[IİıI]|SEMBOL)\s*:\s*([A-Z0-9/\-]+)'
+        symbol_match = re.search(symbol_pattern, text, re.IGNORECASE)
+        if symbol_match:
+            raw_symbol = symbol_match.group(1).upper()
+            # Normalize: remove slashes and dashes
+            raw_symbol = raw_symbol.replace('/', '').replace('-', '')
+            
+            # Ensure USDT suffix
+            if not raw_symbol.endswith('USDT') and not raw_symbol.endswith('USD'):
+                raw_symbol = f"{raw_symbol}USDT"
+            
+            # Validate
+            from utils.binance_validator import is_valid_symbol
+            if is_valid_symbol(raw_symbol):
+                signal.symbol = raw_symbol
+                signal.parsing_notes.append(f"Turkish Symbol: {signal.symbol}")
+        
+        # Extract Entry (Giriş Bölgesi or GİRİŞ)
+        entry_pattern = r'(?:Giriş\s*Bölgesi|GİRİŞ)\s*:\s*([\d\.\s\-]+)'
+        entry_match = re.search(entry_pattern, text, re.IGNORECASE)
+        if entry_match:
+            entry_text = entry_match.group(1)
+            from parsers.number_normalizer import normalize_number_list
+            signal.entries = normalize_number_list(entry_text)
+            signal.parsing_notes.append(f"Turkish Entries: {signal.entries}")
+        
+        # Extract Take Profits (Hedefler or HEDEF)
+        tp_pattern = r'(?:Hedefler|HEDEF)\s*:\s*([\d\.\s\-]+)'
+        tp_match = re.search(tp_pattern, text, re.IGNORECASE)
+        if tp_match:
+            tp_text = tp_match.group(1)
+            from parsers.number_normalizer import normalize_number_list
+            signal.tps = normalize_number_list(tp_text)
+            signal.parsing_notes.append(f"Turkish TPs: {signal.tps}")
+        
+        # Extract Stop Loss (Zararı Durdur or STOP)
+        sl_pattern = r'(?:Zarar[ıi]\s*Durdur|Zarar\s*Kes|STOP)\s*:\s*([\d\.]+)'
+        sl_match = re.search(sl_pattern, text, re.IGNORECASE)
+        if sl_match:
+            from parsers.number_normalizer import normalize_number
+            signal.sl = normalize_number(sl_match.group(1))
+            signal.parsing_notes.append(f"Turkish SL: {signal.sl}")
+        
+        # Calculate confidence
+        signal.confidence = self._calculate_confidence(signal)
+        signal.market = self._infer_market(signal)
+        
+        # Only return if we have at least symbol and side
+        if signal.symbol and signal.side:
+            signal.parsing_notes.append("🇹🇷 Parsed with Turkish Format Parser")
+            return signal
+        
+        return None
+    
+    def _convert_ai_to_parsed_signal(self, text: str, ai_result: Dict) -> ParsedSignal:
+        """
+        Convert AI parser result (dict) to ParsedSignal object.
+        
+        Args:
+            text: Original signal text
+            ai_result: Dictionary from AIParser.parse_signal()
+        
+        Returns:
+            ParsedSignal object with AI-extracted data
+        """
+        signal = ParsedSignal(raw_text=text)
+        
+        # Map AI fields to ParsedSignal
+        signal.symbol = ai_result.get("symbol")
+        signal.side = ai_result.get("side", "").lower()  # Normalize to lowercase
+        signal.leverage_x = ai_result.get("leverage")
+        signal.entries = ai_result.get("entry", [])
+        signal.tps = ai_result.get("tp", [])
+        signal.sl = ai_result.get("sl")
+        signal.confidence = ai_result.get("confidence", 0.8)
+        
+        # Infer market and locale
+        signal.market = self._infer_market(signal)
+        signal.locale = self._detect_locale(text)
+        
+        # Add AI metadata to notes
+        signal.parsing_notes.append(f"AI Model: {self.ai_parser.model if self.ai_parser else 'Unknown'}")
         
         return signal
     
@@ -235,16 +476,20 @@ class EnhancedParser:
         return {
             'total_parses': total,
             'fast_path_hits': self.fast_path_hits,
+            'regex_path_hits': self.regex_path_hits,
+            'ai_path_hits': self.ai_path_hits,
             'full_parses': self.full_parse_count,
             'hit_rate': f"{hit_rate*100:.1f}%",
+            'ai_usage_rate': f"{(self.ai_path_hits/total*100) if total > 0 else 0:.1f}%",
             'whitelist_patterns': whitelist_stats.get('total_entries', 0),
             'whitelist_hit_rate': f"{whitelist_stats.get('hit_rate', 0)*100:.1f}%",
+            'ai_enabled': self.enable_ai,
         }
     
     def _detect_locale(self, text: str) -> str:
         """Detect text locale (tr, en, or mixed)."""
-        tr_keywords = r'(giriş|alım|hedef|zarar|durdur|kaldıraç|bin)'
-        en_keywords = r'(entry|take|profit|stop|loss|leverage)'
+        tr_keywords = r'(giriş|giriş\s*bölgesi|alım|hedef|hedefler|zarar|durdur|kes|kaldıraç|bin|işlem\s*türü|coin\s*ad[iı]|sembol)'
+        en_keywords = r'(entry|take\s*profit|stop\s*loss|leverage|targets)'
         
         has_tr = bool(re.search(tr_keywords, text, re.IGNORECASE))
         has_en = bool(re.search(en_keywords, text, re.IGNORECASE))
@@ -264,7 +509,40 @@ class EnhancedParser:
         
         Formats:
         - #btc, btc, btcusdt, btc/usdt, BTC-USDT
+        - COİN ADI: ZECUSDT, SEMBOL: BTCUSDT (Turkish format)
         """
+        # Check for Turkish symbol keyword first (COİN ADI, SEMBOL, etc.)
+        symbol_keyword_match = re.search(
+            r'(?i)(?:coin\s*ad[iı]|sembol|symbol|pair|çift)\s*:\s*([A-Za-z]{2,10}(?:/|)(?:usdt|usd)?)',
+            text
+        )
+        
+        if symbol_keyword_match:
+            # Extract the symbol after keyword
+            symbol_text = symbol_keyword_match.group(1).strip().upper()
+            
+            # Normalize (remove slashes, ensure USDT suffix)
+            symbol_text = symbol_text.replace('/', '').replace('-', '')
+            
+            # Get base symbol
+            if symbol_text.endswith('USDT'):
+                base_symbol = symbol_text[:-4]
+            elif symbol_text.endswith('USD'):
+                base_symbol = symbol_text[:-3]
+            else:
+                base_symbol = symbol_text
+            
+            # Check blacklist
+            if base_symbol.lower() not in self.BLACKLIST and len(base_symbol) >= 2:
+                symbol = f"{base_symbol}USDT"
+                
+                # Validate against Binance API
+                from utils.binance_validator import is_valid_symbol
+                if is_valid_symbol(symbol):
+                    signal.parsing_notes.append(f"Symbol detected from Turkish keyword: {symbol}")
+                    return symbol
+        
+        # Fallback to regex-based symbol detection
         # Find all potential symbols
         matches = self.SYMBOL_PATTERN.findall(text)
         
@@ -378,8 +656,8 @@ class EnhancedParser:
             first_newline = remaining.find('\n')
             
             # Find next keyword boundary (TP, SL, leverage, etc.)
-            # Include tp1, tp2, hedef1, hedef2, target1, target2 labels, and "take profit"
-            next_keyword_pattern = r'\b(?:tp\d*|take\s*profit|hedef\d*|target\s*\d*|targets|sell|sl|stop|zarar|lev|leverage|kaldıraç)\b'
+            # Include tp1, tp2, hedef1, hedef2, hedefler, target1, target2 labels, and "take profit"
+            next_keyword_pattern = r'\b(?:tp\d*|take\s*profit|hedef\d*|hedefler|target\s*\d*|targets|sell|sl|stop|zarar|lev|leverage|kaldıraç)\b'
             next_match = re.search(next_keyword_pattern, remaining, re.IGNORECASE)
             
             # Take WHICHEVER comes first: newline or next keyword
@@ -538,48 +816,65 @@ class EnhancedParser:
 
 # Example usage and test
 if __name__ == "__main__":
-    parser = EnhancedParser()
+    import asyncio
     
-    print("🧪 Enhanced Parser Tests\n")
-    
-    test_signals = [
-        # TR example
-        "#btc long entry: 112.191 tp: 113k-114k-115k sl 109500 lev 10x",
+    async def main():
+        parser = EnhancedParser(enable_ai=True)
         
-        # EN example
-        "BTCUSDT SHORT\nEntry 112 bin\nTP1 111k, TP2 110k\nSTOP 113200\nkaldıraç 5x",
+        print("🧪 Enhanced Parser Tests (Hybrid Neuro-Symbolic)\n")
         
-        # Relative TP example
-        "eth long 3500 tp: 1-2-3 sl 3400 leverage 20x",
+        test_signals = [
+            # TR example
+            "#btc long entry: 112.191 tp: 113k-114k-115k sl 109500 lev 10x",
+            
+            # EN example
+            "BTCUSDT SHORT\nEntry 112 bin\nTP1 111k, TP2 110k\nSTOP 113200\nkaldıraç 5x",
+            
+            # Relative TP example
+            "eth long 3500 tp: 1-2-3 sl 3400 leverage 20x",
+            
+            # Missing fields (should trigger AI)
+            "sol pump 200 🚀",
+            
+            # Ambiguous signal (should trigger AI)
+            "BNB looks good here, targeting 500-550-600, cut at 450, 10x",
+            
+            # Garbage
+            "join our vip group for signals",
+        ]
         
-        # Missing fields
-        "sol pump 200 🚀",
+        for i, signal_text in enumerate(test_signals, 1):
+            print(f"{'='*60}")
+            print(f"Test #{i}")
+            print(f"{'='*60}")
+            print(f"Input: {signal_text[:80]}...")
+            print()
+            
+            result = await parser.parse(signal_text)
+            
+            print(f"✅ Symbol:     {result.symbol}")
+            print(f"✅ Side:       {result.side}")
+            print(f"✅ Market:     {result.market}")
+            print(f"✅ Leverage:   {result.leverage_x}x" if result.leverage_x else "✅ Leverage:   None")
+            print(f"✅ Entries:    {result.entries}")
+            print(f"✅ TPs:        {result.tps}")
+            print(f"✅ SL:         {result.sl}")
+            print(f"✅ Confidence: {result.confidence:.2f}")
+            print(f"✅ Locale:     {result.locale}")
+            print(f"✅ Valid:      {result.is_valid(min_confidence=0.6)}")
+            print()
+            print("📝 Notes:")
+            for note in result.parsing_notes:
+                print(f"   - {note}")
+            print()
         
-        # Garbage
-        "join our vip group for signals",
-    ]
-    
-    for i, signal_text in enumerate(test_signals, 1):
+        # Print statistics
         print(f"{'='*60}")
-        print(f"Test #{i}")
+        print("📊 Parser Statistics")
         print(f"{'='*60}")
-        print(f"Input: {signal_text[:80]}...")
+        stats = parser.get_stats()
+        for key, value in stats.items():
+            print(f"   {key}: {value}")
         print()
-        
-        result = parser.parse(signal_text)
-        
-        print(f"✅ Symbol:     {result.symbol}")
-        print(f"✅ Side:       {result.side}")
-        print(f"✅ Market:     {result.market}")
-        print(f"✅ Leverage:   {result.leverage_x}x" if result.leverage_x else "✅ Leverage:   None")
-        print(f"✅ Entries:    {result.entries}")
-        print(f"✅ TPs:        {result.tps}")
-        print(f"✅ SL:         {result.sl}")
-        print(f"✅ Confidence: {result.confidence:.2f}")
-        print(f"✅ Locale:     {result.locale}")
-        print(f"✅ Valid:      {result.is_valid(min_confidence=0.6)}")
-        print()
-        print("📝 Notes:")
-        for note in result.parsing_notes:
-            print(f"   - {note}")
-        print()
+    
+    asyncio.run(main())

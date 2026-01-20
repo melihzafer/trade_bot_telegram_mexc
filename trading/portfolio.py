@@ -136,7 +136,8 @@ class Portfolio:
             error(f"❌ Failed to save portfolio: {e}")
     
     def open_position(self, symbol: str, side: str, entry_price: float, 
-                     quantity: float, tp: float = None, sl: float = None):
+                     quantity: float, tp: float = None, sl: float = None, 
+                     margin_required: float = None):
         """Open a new position."""
         if symbol in self.positions:
             warn(f"⚠️ Position already exists for {symbol}")
@@ -152,16 +153,20 @@ class Portfolio:
             sl=sl
         )
         
-        # Deduct position value from balance
-        position_value = entry_price * quantity
-        if position_value > self.balance:
-            error(f"❌ Insufficient balance: ${self.balance:.2f} < ${position_value:.2f}")
+        # Deduct margin from balance (not full notional value if leveraged)
+        # If margin_required is provided, use it (for leveraged trades)
+        # Otherwise, use full position value (spot trades)
+        cost = margin_required if margin_required is not None else (entry_price * quantity)
+        
+        if cost > self.balance:
+            error(f"❌ Insufficient balance: ${self.balance:.2f} < ${cost:.2f}")
             return False
         
-        self.balance -= position_value
+        self.balance -= cost
         self.positions[symbol] = position
         
-        success(f"✅ Opened {side} {symbol} @ ${entry_price:.4f} x {quantity:.4f}")
+        notional = entry_price * quantity
+        success(f"✅ Opened {side} {symbol} @ ${entry_price:.4f} x {quantity:.4f} (margin: ${cost:.2f}, notional: ${notional:.2f})")
         self.save()
         return True
     
@@ -236,6 +241,10 @@ class Portfolio:
         """Get position by symbol."""
         return self.positions.get(symbol)
     
+    def get_all_positions(self) -> Dict[str, Position]:
+        """Get all open positions."""
+        return self.positions
+    
     def has_position(self, symbol: str) -> bool:
         """Check if position exists."""
         return symbol in self.positions
@@ -277,6 +286,29 @@ class Portfolio:
             'loss_count': self.loss_count,
             'win_rate': self.get_win_rate(),
         }
+    
+    def get_statistics(self) -> dict:
+        """
+        Get detailed portfolio statistics (alias for get_summary with additional fields).
+        Used by main_autonomous.py for daily reports.
+        """
+        summary = self.get_summary()
+        
+        # Add additional statistics
+        summary['total_trades'] = len(self.closed_trades)
+        summary['winning_trades'] = self.win_count
+        summary['losing_trades'] = self.loss_count
+        summary['total_pnl_realized'] = self.total_pnl
+        
+        # Calculate largest win/loss
+        if self.closed_trades:
+            summary['largest_win'] = max((t.net_pnl for t in self.closed_trades), default=0.0)
+            summary['largest_loss'] = min((t.net_pnl for t in self.closed_trades), default=0.0)
+        else:
+            summary['largest_win'] = 0.0
+            summary['largest_loss'] = 0.0
+        
+        return summary
     
     def print_summary(self):
         """Print portfolio summary."""
