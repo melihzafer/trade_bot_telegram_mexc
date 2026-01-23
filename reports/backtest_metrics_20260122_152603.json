@@ -1,0 +1,46 @@
+{
+  "total_trades": 25,
+  "winning_trades": 13,
+  "losing_trades": 12,
+  "win_rate": 52.0,
+  "total_pnl_gross": -29095.335691439122,
+  "total_pnl_net": -29179.456621571182,
+  "total_fees": 31.556239838650868,
+  "total_slippage": 52.56469029341232,
+  "avg_win": 58.56661709914785,
+  "avg_loss": -2495.0685536550086,
+  "largest_win": 190.88918013661265,
+  "largest_loss": -27772.79949290104,
+  "profit_factor": 0.025429028164830784,
+  "expectancy": -1167.1782648628473,
+  "max_drawdown": 29433.25330910517,
+  "max_drawdown_pct": 287.3425956029135,
+  "max_drawdown_duration_days": 0,
+  "sharpe_ratio": -3.37327174919312,
+  "sortino_ratio": 0.0,
+  "calmar_ratio": 0.0,
+  "initial_capital": 10000.0,
+  "final_capital": -19179.456621571182,
+  "total_return": -29179.456621571182,
+  "total_return_pct": -291.7945662157118,
+  "start_date": "2026-01-06",
+  "end_date": "2026-01-21",
+  "duration_days": 14,
+  "avg_trade_duration_hours": 5.97,
+  "monthly_returns": {
+    "2026-01": -29179.45662157119
+  },
+  "channel_metrics": {
+    "Kripto Star": {
+      "total_trades": 25,
+      "winning_trades": 13,
+      "losing_trades": 12,
+      "win_rate": 52.0,
+      "total_pnl": -29179.456621571186,
+      "avg_pnl_per_trade": -1167.1782648628475,
+      "profit_factor": 0.02542902816483079,
+      "best_trade": 190.88918013661265,
+      "worst_trade": -27772.79949290104
+    }
+  }
+}

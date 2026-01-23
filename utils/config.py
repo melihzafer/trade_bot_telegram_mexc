@@ -26,9 +26,17 @@ EXCHANGE_NAME = os.getenv("EXCHANGE", "mexc")
 TELEGRAM_API_ID = int(os.getenv("TELEGRAM_API_ID", "0"))
 TELEGRAM_API_HASH = os.getenv("TELEGRAM_API_HASH", "")
 TELEGRAM_PHONE = os.getenv("TELEGRAM_PHONE", "")
+# Environment & Config
 TELEGRAM_CHANNELS = [
     c.strip() for c in os.getenv("TELEGRAM_CHANNELS", "").split(",") if c.strip()
 ]
+
+# Separate channel list for backtesting (optional - falls back to TELEGRAM_CHANNELS)
+BACKTEST_CHANNELS = [
+    c.strip() for c in os.getenv("BACKTEST_CHANNELS", "").split(",") if c.strip()
+]
+if not BACKTEST_CHANNELS:
+    BACKTEST_CHANNELS = TELEGRAM_CHANNELS
 
 # -------------------- Risk Management --------------------
 ACCOUNT_EQUITY_USDT = float(os.getenv("ACCOUNT_EQUITY_USDT", "1000"))
@@ -44,6 +52,26 @@ PAPER_TRADING_CHANNELS = [
 PAPER_TRADING_ENABLED = os.getenv("PAPER_TRADING_ENABLED", "true").lower() == "true"
 PAPER_INITIAL_BALANCE = float(os.getenv("PAPER_INITIAL_BALANCE", "10000"))
 PAPER_POSITION_SIZE_PCT = float(os.getenv("PAPER_POSITION_SIZE_PCT", "5"))
+
+# -------------------- AI Parser (Multi-Provider) --------------------
+# OpenRouter (DeepSeek R1)
+OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY", "")
+OPENROUTER_MODEL = os.getenv("OPENROUTER_MODEL", "deepseek/deepseek-r1-0528:free")
+
+# Local API (e.g., LM Studio, Gemini)
+LOCAL_AI_URL = os.getenv("LOCAL_AI_URL", "")
+LOCAL_AI_KEY = os.getenv("LOCAL_AI_KEY", "")
+LOCAL_AI_MODEL = os.getenv("LOCAL_AI_MODEL", "gemini-3-flash")
+
+# Ollama (Local LLMs)
+OLLAMA_URL = os.getenv("OLLAMA_URL", "")
+OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "qwen3:8b")
+OLLAMA_CONTEXT_SIZE = int(os.getenv("OLLAMA_CONTEXT_SIZE", "8192"))  # 8k for speed
+LOCAL_MODEL_NAME = os.getenv("LOCAL_MODEL_NAME", OLLAMA_MODEL)  # Legacy compatibility
+
+# Groq (Fast cloud inference)
+GROQ_API_KEY = os.getenv("GROQ_API_KEY", "")
+GROQ_MODEL = os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile")
 
 # Default Trading Rules
 DEFAULT_ENTRY_TYPE = os.getenv("DEFAULT_ENTRY_TYPE", "MARKET")

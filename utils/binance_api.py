@@ -26,7 +26,7 @@ class BinanceClient:
     
     def __init__(self):
         """Initialize Binance client."""
-        info("📡 Binance Client initialized")
+        info("Binance Client initialized")
     
     def _request(self, endpoint: str, params: Optional[Dict] = None) -> any:
         """
@@ -37,7 +37,7 @@ class BinanceClient:
             params: Query parameters
             
         Returns:
-            JSON response
+            JSON response or None on error
         """
         url = f"{self.BASE_URL}{endpoint}"
         
@@ -46,8 +46,18 @@ class BinanceClient:
             response.raise_for_status()
             return response.json()
             
+        except requests.exceptions.HTTPError as e:
+            # Handle specific HTTP errors
+            if e.response.status_code == 400:
+                symbol = params.get('symbol', 'Unknown') if params else 'Unknown'
+                warn(f"⚠️ Symbol {symbol} not found on Binance (400 Bad Request)")
+                return None
+            else:
+                error(f"Binance API HTTP error: {e}")
+                return None
+                
         except requests.exceptions.RequestException as e:
-            error(f"❌ Binance API request failed: {e}")
+            error(f"Binance API request failed: {e}")
             return None
     
     def get_klines(
@@ -136,7 +146,7 @@ class BinanceClient:
             symbol: Trading pair
             
         Returns:
-            Current price
+            Current price or None if symbol not found
         """
         endpoint = "/api/v3/ticker/price"
         response = self._request(endpoint, {"symbol": symbol})
@@ -144,7 +154,21 @@ class BinanceClient:
         if response and "price" in response:
             return float(response["price"])
         
+        # Symbol not found on Binance
         return None
+    
+    def is_symbol_available(self, symbol: str) -> bool:
+        """
+        Check if a symbol is available on Binance.
+        
+        Args:
+            symbol: Trading pair (e.g., "BTCUSDT")
+            
+        Returns:
+            True if symbol exists on Binance
+        """
+        price = self.get_current_price(symbol)
+        return price is not None
     
     def test_connection(self) -> bool:
         """

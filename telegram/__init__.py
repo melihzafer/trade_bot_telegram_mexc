@@ -7,10 +7,9 @@ Components:
 """
 
 from .collector import run_collector
-from .parser import parse_message, run_parser
+from .parser import parse_message
 
 __all__ = [
     "run_collector",
     "parse_message",
-    "run_parser",
 ]

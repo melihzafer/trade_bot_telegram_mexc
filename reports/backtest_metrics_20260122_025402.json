@@ -1,0 +1,46 @@
+{
+  "total_trades": 10,
+  "winning_trades": 4,
+  "losing_trades": 6,
+  "win_rate": 40.0,
+  "total_pnl_gross": -103.39355234808794,
+  "total_pnl_net": -135.4064369495204,
+  "total_fees": 12.004862995111653,
+  "total_slippage": 20.00802160632082,
+  "avg_win": 17.298911001377974,
+  "avg_loss": -34.10034682583872,
+  "largest_win": 23.299113343077924,
+  "largest_loss": -43.65415672687615,
+  "profit_factor": 0.338196188829183,
+  "expectancy": -13.54064369495204,
+  "max_drawdown": 169.5448356049892,
+  "max_drawdown_pct": 1.6896800589047836,
+  "max_drawdown_duration_days": 0,
+  "sharpe_ratio": -8.165456555300427,
+  "sortino_ratio": 0.0,
+  "calmar_ratio": 0.0,
+  "initial_capital": 10000.0,
+  "final_capital": 9864.59356305048,
+  "total_return": -135.40643694952087,
+  "total_return_pct": -1.3540643694952088,
+  "start_date": "2024-01-15",
+  "end_date": "2024-01-16",
+  "duration_days": 1,
+  "avg_trade_duration_hours": 0.25,
+  "monthly_returns": {
+    "2024-01": -135.4064369495204
+  },
+  "channel_metrics": {
+    "test_channel": {
+      "total_trades": 10,
+      "winning_trades": 4,
+      "losing_trades": 6,
+      "win_rate": 40.0,
+      "total_pnl": -135.4064369495204,
+      "avg_pnl_per_trade": -13.540643694952042,
+      "profit_factor": 0.338196188829183,
+      "best_trade": 23.299113343077924,
+      "worst_trade": -43.65415672687615
+    }
+  }
+}

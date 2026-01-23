@@ -1,9 +1,15 @@
 """
 🎯 Trading Configuration
 Centralized settings for backtest/paper/live trading modes.
+Loads risk parameters from .env for easy adjustment.
 """
+import os
 from pathlib import Path
 from typing import Literal
+
+# Load environment variables
+from dotenv import load_dotenv
+load_dotenv()
 
 # ============================================================================
 # TRADING MODE
@@ -13,25 +19,26 @@ TradingMode = Literal["backtest", "paper", "live"]
 TRADING_MODE: TradingMode = "paper"  # backtest | paper | live
 
 # ============================================================================
-# RISK MANAGEMENT
+# RISK MANAGEMENT (from .env)
 # ============================================================================
 class RiskConfig:
-    """Position sizing and risk controls."""
+    """Position sizing and risk controls - loaded from .env."""
     
-    # Capital allocation
-    INITIAL_CAPITAL = 10000.0  # USDT
+    # Capital allocation (from .env)
+    INITIAL_CAPITAL = float(os.getenv("ACCOUNT_EQUITY_USDT", "10000"))
     MAX_POSITION_SIZE_PCT = 0.10  # 10% of capital per trade
     MIN_POSITION_SIZE_USDT = 10.0  # Minimum order size
     
-    # Risk limits
-    MAX_CONCURRENT_TRADES = 5  # Maximum open positions
-    DAILY_LOSS_LIMIT_PCT = 0.05  # 5% daily loss → stop trading
+    # Risk limits (from .env)
+    RISK_PER_TRADE_PCT = float(os.getenv("RISK_PER_TRADE_PCT", "2.0")) / 100.0  # Convert to decimal
+    MAX_CONCURRENT_TRADES = int(os.getenv("MAX_CONCURRENT_POSITIONS", "5"))
+    DAILY_LOSS_LIMIT_PCT = float(os.getenv("DAILY_MAX_LOSS_PCT", "5.0")) / 100.0  # Convert to decimal
     WEEKLY_LOSS_LIMIT_PCT = 0.15  # 15% weekly loss → stop trading
     MAX_DRAWDOWN_PCT = 0.25  # 25% drawdown → emergency stop
     
-    # Leverage (futures only)
+    # Leverage (from .env)
     USE_LEVERAGE = False
-    MAX_LEVERAGE = 3  # 1-5x recommended
+    MAX_LEVERAGE = int(os.getenv("LEVERAGE", "5"))
     
     # Order execution
     SLIPPAGE_TOLERANCE_PCT = 0.005  # 0.5% max slippage
@@ -44,7 +51,9 @@ class RiskConfig:
 class PaperConfig:
     """Paper trading simulator settings."""
     
-    INITIAL_BALANCE = 10000.0  # Starting virtual balance
+    # Use same initial capital as risk config (from .env)
+    INITIAL_BALANCE = RiskConfig.INITIAL_CAPITAL
+    
     SIMULATE_FEES = True
     MAKER_FEE = 0.0002  # 0.02% maker fee
     TAKER_FEE = 0.0006  # 0.06% taker fee
@@ -54,6 +63,31 @@ class PaperConfig:
     # Portfolio file
     PORTFOLIO_FILE = Path("data/paper_portfolio.json")
     TRADES_LOG = Path("data/paper_trades.jsonl")
+
+
+# ============================================================================
+# BACKTEST CONFIGURATION
+# ============================================================================
+class BacktestConfig:
+    """Backtest engine settings."""
+    
+    # Capital and risk (from .env)
+    INITIAL_CAPITAL = RiskConfig.INITIAL_CAPITAL
+    RISK_PCT_PER_TRADE = RiskConfig.RISK_PER_TRADE_PCT
+    
+    # Fees and execution
+    MAKER_FEE = 0.0002  # 0.02% maker fee
+    TAKER_FEE = 0.0006  # 0.06% taker fee
+    SLIPPAGE_PCT = 0.001  # 0.1% average slippage
+    
+    # Time parameters
+    DEFAULT_TIMEFRAME = "15m"  # Candle timeframe
+    MAX_BARS_HELD = 96  # Maximum candles to hold (24h for 15m)
+    LOOKBACK_CANDLES = 500  # Historical candles to fetch
+    
+    # Data sources
+    SIGNALS_FILE = Path("data/signals_parsed.jsonl")
+    OUTPUT_DIR = Path("reports")
 
 
 # ============================================================================

@@ -321,9 +321,10 @@ class ChimeraAutonomous:
                     "largest_loss": portfolio_stats.get("largest_loss", 0),
                     "equity": self.engine.portfolio.get_equity(),
                     "open_positions": len(self.engine.portfolio.get_all_positions()),
-                    "daily_loss_pct": risk_metrics.get("daily_loss_pct", 0),
-                    "circuit_breaker_active": risk_metrics.get("circuit_breaker_active", False),
-                    "kill_switch_active": risk_metrics.get("kill_switch_active", False)
+                    "daily_pnl": risk_metrics.daily_pnl,
+                    "daily_pnl_pct": risk_metrics.daily_pnl_pct,
+                    "circuit_breaker_active": risk_metrics.circuit_breaker_active,
+                    "kill_switch_active": risk_metrics.kill_switch_active
                 }
                 
                 # Send report

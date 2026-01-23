@@ -266,7 +266,54 @@ TZ=Europe/Sofia
 
 ## 🎯 Usage
 
-### Mode 1: Full System (Default)
+### Step 1: Collect Signals
+
+Before backtesting, you need to collect signals from Telegram channels.
+
+#### Real-Time Collection (Recommended)
+Collects signals as they arrive in real-time:
+
+```bash
+# Collect raw signals (saves everything)
+python collect_signals.py
+
+# Collect and auto-parse signals (saves only valid trading signals)
+python collect_signals.py --parse
+
+# Custom output file
+python collect_signals.py --output data/my_signals.jsonl --parse
+```
+
+**Best Practice:** Run for 24-48 hours to gather sufficient data:
+```bash
+# Linux/Mac (background process)
+nohup python collect_signals.py --parse > collector.log 2>&1 &
+
+# Windows (keep terminal open)
+python collect_signals.py --parse
+```
+
+#### Historical Collection
+Fetches past messages from channels:
+
+```bash
+# Collect last 100 messages per channel
+python collect_signals.py --mode historical
+
+# Collect last 500 messages and parse
+python collect_signals.py --mode historical --limit 500 --parse
+
+# Collect last 1000 messages (large dataset)
+python collect_signals.py --mode historical --limit 1000 --parse
+```
+
+**Output Files:**
+- `data/signals_raw.jsonl` - Raw Telegram messages
+- `data/signals_parsed.jsonl` - Parsed trading signals (ready for backtest)
+
+---
+
+### Step 2: Run Backtest
 Runs collector, parser, and paper trader concurrently.
 
 ```bash
@@ -304,30 +351,94 @@ python main.py --mode collector
 
 ---
 
-### Mode 3: Backtest Only
-Test historical performance without live trading.
+### Step 2: Run Backtest
+
+Test collected signals against historical price data **(now with Binance API for better reliability)**.
+
+**New Features:**
+- 📡 **Channel Comparison**: See which signal sources perform best
+- 🌐 **Binance Integration**: Uses Binance API for historical data (more reliable than MEXC)
+- 🎯 **Source Tracking**: Every trade shows which channel it came from
+Test historical performance with realistic simulation.
 
 ```bash
-python main.py --mode backtest
+# Run backtest with default settings
+python run_backtest.py
+
+# Custom capital and risk
+python run_backtest.py --capital 50000 --risk 0.03
+
+# Filter by date range
+python run_backtest.py --start-date 2024-01-01 --end-date 2024-12-31
+
+# Custom fees and slippage
+python run_backtest.py --maker-fee 0.0001 --taker-fee 0.0005 --slippage 0.002
+
+# Use custom signals file
+python run_backtest.py --signals data/my_signals.jsonl
+
+# Skip charts/HTML (metrics only)
+python run_backtest.py --no-charts --no-html
 ```
 
 **What happens:**
-- Reads `data/signals_parsed.csv`
-- Fetches historical OHLCV from MEXC
-- Evaluates TP/SL hits
-- Saves results to `data/backtest_results.csv`
+- Reads parsed signals from JSONL file
+- Fetches historical OHLCV data from MEXC
+- Simulates realistic trading with:
+  - Position sizing based on risk management
+  - Trading fees (0.02% maker / 0.06% taker)
+  - Slippage (0.1% average)
+  - Stop loss and take profit execution
+- Calculates comprehensive metrics:
+  - Win rate, profit factor, expectancy
+  - Sharpe ratio, max drawdown
+  - Monthly performance breakdown
+- Generates visualizations:
+  - Equity curve with drawdown overlay
+  - Trade PnL distribution histograms
+  - Monthly performance heatmap
+  - Win/loss pie chart
+- Exports results:
+  - Detailed HTML report with charts
+  - JSON metrics file
+  - CSV trade log for external analysis
+  - JSONL trade history
 
 **Output:**
 ```
-📊 Backtest Results Summary
-══════════════════════════════════════════════════
-Total Signals: 150
-✅ Wins: 87
-❌ Losses: 45
-⏳ Open: 12
-⚠️  Errors: 6
-📈 Win Rate: 65.91%
+🧪 BACKTEST RESULTS
+══════════════════════════════════════════════════════════════════════
+💰 Initial Capital: $10,000.00
+💵 Final Capital: $12,450.75
+📈 Total Return: $2,450.75 (+24.51%)
+📊 Total Trades: 150
+✅ Wins: 92 (61.3%)
+❌ Losses: 58
+💹 Profit Factor: 1.85
+🎯 Expectancy: $16.34 per trade
+📉 Max Drawdown: $680.25 (6.80%)
+📊 Sharpe Ratio: 1.82
+💸 Total Fees: $145.20
+📉 Total Slippage: $85.40
+══════════════════════════════════════════════════════════════════════
+✅ HTML report saved: reports/backtest_report_20260122_003000.html
 ```
+
+**Available Parameters:**
+| Parameter | Description | Default |
+|-----------|-------------|---------|
+| `--signals` | Path to signals JSONL file | `data/signals_parsed.jsonl` |
+| `--output` | Output directory for reports | `reports` |
+| `--capital` | Initial capital in USDT | `10000` |
+| `--risk` | Risk percentage per trade | `0.02` (2%) |
+| `--maker-fee` | Maker fee percentage | `0.0002` (0.02%) |
+| `--taker-fee` | Taker fee percentage | `0.0006` (0.06%) |
+| `--slippage` | Average slippage percentage | `0.001` (0.1%) |
+| `--max-bars` | Max candles to hold position | `96` (24h for 15m) |
+| `--start-date` | Start date filter (YYYY-MM-DD) | None |
+| `--end-date` | End date filter (YYYY-MM-DD) | None |
+| `--no-charts` | Skip chart generation | False |
+| `--no-html` | Skip HTML report | False |
 
 ---
 

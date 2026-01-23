@@ -162,9 +162,9 @@ class EnhancedParser:
         
         if enable_ai:
             try:
-                from parsers.ai_parser import AIParser
-                self.ai_parser = AIParser()
-                logger.info("🧠 AI Parser enabled (Neuro-Symbolic mode)")
+                from parsers.multi_ai_parser import MultiAIParser
+                self.ai_parser = MultiAIParser()
+                logger.info("🧠 AI Parser enabled (Multi-Provider: Groq → Ollama → OpenRouter → Local)")
             except Exception as e:
                 logger.warn(f"⚠️  AI Parser initialization failed: {e}")
                 logger.warn("Falling back to Regex-only mode")
@@ -252,11 +252,18 @@ class EnhancedParser:
                     # Convert AI result to ParsedSignal
                     ai_signal = self._convert_ai_to_parsed_signal(text, ai_result)
                     
-                    logger.success(f"🧠 AI Path: Successfully parsed {ai_signal.symbol} {ai_signal.side} (Confidence: {ai_signal.confidence:.2f})")
+                    # Defensive logging with None checks
+                    symbol_str = ai_signal.symbol or "UNKNOWN"
+                    side_str = ai_signal.side or "UNKNOWN"
+                    confidence_str = f"{ai_signal.confidence:.2f}" if ai_signal.confidence else "0.00"
+                    
+                    logger.success(f"🧠 AI Path: Successfully parsed {symbol_str} {side_str} (Confidence: {confidence_str})")
                     ai_signal.parsing_notes.append(f"🧠 Routing: AI Path (Regex confidence too low: {regex_signal.confidence:.2f})")
                     
-                    # LEARN: Add AI-parsed signal to whitelist
-                    if ai_signal.symbol and ai_signal.confidence >= 0.6:
+                    # LEARN: Add AI-parsed signal to whitelist (with None checks)
+                    if (ai_signal.symbol and 
+                        ai_signal.confidence is not None and 
+                        ai_signal.confidence >= 0.6):
                         self.whitelist.add(
                             text=text,
                             symbol=ai_signal.symbol,
@@ -418,19 +425,38 @@ class EnhancedParser:
         
         # Map AI fields to ParsedSignal
         signal.symbol = ai_result.get("symbol")
-        signal.side = ai_result.get("side", "").lower()  # Normalize to lowercase
+        
+        # Normalize side (handle None, empty string, or lowercase)
+        side_raw = ai_result.get("side")
+        if side_raw and isinstance(side_raw, str):
+            signal.side = side_raw.strip().lower()
+        else:
+            signal.side = None
+        
         signal.leverage_x = ai_result.get("leverage")
         signal.entries = ai_result.get("entry", [])
         signal.tps = ai_result.get("tp", [])
         signal.sl = ai_result.get("sl")
-        signal.confidence = ai_result.get("confidence", 0.8)
+        
+        # Handle confidence with default fallback
+        confidence_raw = ai_result.get("confidence")
+        if confidence_raw is not None and isinstance(confidence_raw, (int, float)):
+            signal.confidence = float(confidence_raw)
+        else:
+            signal.confidence = 0.8  # Default if missing
         
         # Infer market and locale
         signal.market = self._infer_market(signal)
         signal.locale = self._detect_locale(text)
         
         # Add AI metadata to notes
-        signal.parsing_notes.append(f"AI Model: {self.ai_parser.model if self.ai_parser else 'Unknown'}")
+        if hasattr(self.ai_parser, 'get_stats'):
+            # Multi-provider stats
+            stats = self.ai_parser.get_stats()
+            active_providers = [name for name, data in stats.items() if data['enabled']]
+            signal.parsing_notes.append(f"AI Providers: {', '.join(active_providers)}")
+        else:
+            signal.parsing_notes.append(f"AI Provider: Multi-Provider System")
         
         return signal
     

@@ -337,6 +337,99 @@ class Portfolio:
                 pnl_pct_str = f"({pos.unrealized_pnl_pct:+.2f}%)" if pos.unrealized_pnl_pct else ""
                 print(f"  {pos.side:5} {pos.symbol:12} @ ${pos.entry_price:.4f} | "
                       f"PnL: {pnl_str:>10} {pnl_pct_str}")
+    
+    def close_all_positions(self, current_prices: Dict[str, float], reason: str = "MANUAL_CLOSE_ALL") -> int:
+        """
+        Close all open positions at current market prices.
+        
+        Args:
+            current_prices: Dict of symbol -> current price
+            reason: Exit reason (default: MANUAL_CLOSE_ALL)
+            
+        Returns:
+            Number of positions closed
+        """
+        if not self.positions:
+            info("ℹ️ No open positions to close")
+            return 0
+        
+        closed_count = 0
+        symbols_to_close = list(self.positions.keys())
+        
+        info(f"🔴 Closing {len(symbols_to_close)} open positions...")
+        
+        for symbol in symbols_to_close:
+            if symbol not in current_prices:
+                warn(f"⚠️ No price data for {symbol}, skipping")
+                continue
+            
+            exit_price = current_prices[symbol]
+            if self.close_position(symbol, exit_price, reason, fees=0.0):
+                closed_count += 1
+        
+        success(f"✅ Closed {closed_count}/{len(symbols_to_close)} positions")
+        return closed_count
+    
+    def reset_portfolio(self, keep_history: bool = False):
+        """
+        Reset portfolio to initial state.
+        
+        Args:
+            keep_history: If True, keeps closed trades history. If False, wipes everything.
+        """
+        info("🔄 Resetting portfolio...")
+        
+        # Close all positions at entry price (no PnL impact)
+        if self.positions:
+            symbols_to_close = list(self.positions.keys())
+            info(f"   Closing {len(symbols_to_close)} open positions...")
+            
+            for symbol in symbols_to_close:
+                position = self.positions[symbol]
+                # Close at entry price to avoid PnL impact
+                self.close_position(symbol, position.entry_price, "RESET", fees=0.0)
+        
+        # Reset balances
+        self.balance = self.initial_balance
+        self.positions = {}
+        
+        if not keep_history:
+            # Wipe all history
+            self.closed_trades = []
+            self.total_pnl = 0.0
+            self.total_fees = 0.0
+            self.win_count = 0
+            self.loss_count = 0
+            success("✅ Portfolio reset to initial state (history wiped)")
+        else:
+            success("✅ Portfolio reset to initial state (history preserved)")
+        
+        self.save()
+        self.print_summary()
+    
+    def force_close_position(self, symbol: str, exit_price: Optional[float] = None) -> bool:
+        """
+        Forcefully close a single position (manual override).
+        
+        Args:
+            symbol: Symbol to close
+            exit_price: Exit price (uses entry price if not provided)
+            
+        Returns:
+            True if closed successfully
+        """
+        if symbol not in self.positions:
+            error(f"❌ No position found for {symbol}")
+            return False
+        
+        position = self.positions[symbol]
+        
+        # Use entry price if no exit price provided (break-even exit)
+        if exit_price is None:
+            exit_price = position.entry_price
+            info(f"ℹ️ No exit price provided, closing at entry (break-even)")
+        
+        return self.close_position(symbol, exit_price, "MANUAL", fees=0.0)
 
 
 if __name__ == "__main__":

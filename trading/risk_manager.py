@@ -148,25 +148,13 @@ class RiskSentinel:
         logger.info("🛡️ Risk Sentinel initialized")
         logger.info(f"   Initial Equity: ${self.initial_equity:,.2f}")
         logger.info(f"   Daily Loss Limit: {RiskConfig.DAILY_LOSS_LIMIT_PCT*100:.1f}%")
-        logger.info(f"   Whitelisted Symbols: {len(self.allowed_symbols)}")
+        logger.info(f"   Symbol Whitelist: {'DISABLED (Accept all coins)' if not self.allowed_symbols else f'{len(self.allowed_symbols)} symbols'}")
         logger.info(f"   Blacklisted Symbols: {len(self.blacklisted_symbols)}")
     
     def _load_config(self):
         """Load risk configuration from file or use defaults."""
-        # Default symbol lists
-        self.allowed_symbols: Set[str] = {
-           "BTCUSDT", "ETHUSDT", "SOLUSDT", "BNBUSDT", "XRPUSDT", "ADAUSDT", "DOGEUSDT", "AVAXUSDT", "TRXUSDT", "DOTUSDT",
-        "LINKUSDT", "MATICUSDT", "LTCUSDT", "BCHUSDT", "UNIUSDT", "ATOMUSDT", "NEARUSDT", "APTUSDT", "INJUSDT", "LDOUSDT",
-        "FILUSDT", "ETCUSDT", "ARBUSDT", "OPUSDT", "RNDRUSDT", "VETUSDT", "GRTUSDT", "MKRUSDT", "SNXUSDT", "THETAUSDT",
-        "AAVEUSDT", "ALGOUSDT", "AXSUSDT", "SANDUSDT", "EGLDUSDT", "EOSUSDT", "XTZUSDT", "MANAUSDT", "IMXUSDT", "FLOWUSDT",
-        "CHZUSDT", "CRVUSDT", "KAVAUSDT", "FTMUSDT", "RUNEUSDT", "ZECUSDT", "KLAYUSDT", "HBARUSDT", "IOTAUSDT", "NEOUSDT",
-        "XLMUSDT", "GALAUSDT", "QNTUSDT", "MINAUSDT", "DYDXUSDT", "FXSUSDT", "ARUSDT", "ENJUSDT", "BATUSDT", "MASKUSDT",
-        "APEUSDT", "GMTUSDT", "KSMUSDT", "CVXUSDT", "COMPUSDT", "ZILUSDT", "WLDUSDT", "SUIUSDT", "SEIUSDT", "TIAUSDT",
-        "BLURUSDT", "PEPEUSDT", "BONKUSDT", "SHIBUSDT", "FLOKIUSDT", "MEMEUSDT", "ORDIUSDT", "SATSUSDT", "1000SATSUSDT",
-        "JUPUSDT", "PYTHUSDT", "ENSUSDT", "PENDLEUSDT", "STRKUSDT", "FETUSDT", "AGIXUSDT", "OCEANUSDT", "JASMYUSDT",
-        "CFXUSDT", "STXUSDT", "WOOUSDT", "IDUSDT", "MAGICUSDT", "HIGHUSDT", "LPTUSDT", "ANKRUSDT", "GLMRUSDT", "RDNTUSDT"
-    
-        }
+        # Default symbol lists (empty = accept all coins)
+        self.allowed_symbols: Set[str] = set()  # Empty whitelist = unlimited mode
         
         self.blacklisted_symbols: Set[str] = {
             # Scam/rug-pull history
@@ -386,12 +374,12 @@ class RiskSentinel:
                 reason="Circuit breaker active - loss limits exceeded"
             )
         
-        # 3. Whitelist check (if whitelist is enforced)
+        # 3. Whitelist check (skip if whitelist is empty = unlimited mode)
         if self.allowed_symbols and symbol not in self.allowed_symbols:
             self.stats['signals_rejected'] += 1
             return ValidationResult(
                 valid=False,
-                reason=f"Symbol {symbol} not in whitelist"
+                reason=f"Symbol {symbol} not in whitelist (whitelist mode enabled)"
             )
         
         # 4. Blacklist check

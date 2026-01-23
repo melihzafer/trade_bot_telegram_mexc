@@ -1,0 +1,33 @@
+{
+  "total_trades": 9,
+  "winning_trades": 4,
+  "losing_trades": 5,
+  "win_rate": 44.44444444444444,
+  "total_pnl_gross": -66.5268970084156,
+  "total_pnl_net": -95.42959790255597,
+  "total_fees": 10.838531008825731,
+  "total_slippage": 18.06416988531463,
+  "avg_win": 17.298911001377974,
+  "avg_loss": -32.92504838161357,
+  "largest_win": 23.299113343077924,
+  "largest_loss": -43.65415672687615,
+  "profit_factor": 0.4203222009183319,
+  "expectancy": -10.603288655839552,
+  "max_drawdown": 129.56799655802388,
+  "max_drawdown_pct": 1.291271770532739,
+  "max_drawdown_duration_days": 0,
+  "sharpe_ratio": -6.428547543037044,
+  "sortino_ratio": 0.0,
+  "calmar_ratio": 0.0,
+  "initial_capital": 10000.0,
+  "final_capital": 9904.570402097444,
+  "total_return": -95.42959790255554,
+  "total_return_pct": -0.9542959790255554,
+  "start_date": "2024-01-15",
+  "end_date": "2024-01-16",
+  "duration_days": 1,
+  "avg_trade_duration_hours": 0.25,
+  "monthly_returns": {
+    "2024-01": -95.42959790255597
+  }
+}

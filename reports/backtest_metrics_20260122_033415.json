@@ -1,0 +1,73 @@
+{
+  "total_trades": 63,
+  "winning_trades": 3,
+  "losing_trades": 60,
+  "win_rate": 4.761904761904762,
+  "total_pnl_gross": -6345.864578073876,
+  "total_pnl_net": -6447.534231769474,
+  "total_fees": 38.12847600712465,
+  "total_slippage": 63.54117768846966,
+  "avg_win": 90.0981097805527,
+  "avg_loss": -111.96380935185216,
+  "largest_win": 129.85786039593103,
+  "largest_loss": -293.8319250053596,
+  "profit_factor": 0.04023537172507887,
+  "expectancy": -102.34181320269002,
+  "max_drawdown": 6447.534231769472,
+  "max_drawdown_pct": 64.47534231769471,
+  "max_drawdown_duration_days": 0,
+  "sharpe_ratio": -23.286528115280923,
+  "sortino_ratio": 0.0,
+  "calmar_ratio": 0.0,
+  "initial_capital": 10000.0,
+  "final_capital": 3552.4657682305274,
+  "total_return": -6447.534231769472,
+  "total_return_pct": -64.47534231769471,
+  "start_date": "2025-04-21",
+  "end_date": "2026-01-20",
+  "duration_days": 273,
+  "avg_trade_duration_hours": 2.888888888888889,
+  "monthly_returns": {
+    "2025-04": -0.05205205205205121,
+    "2025-05": -0.10410410410410244,
+    "2025-10": -3459.380171359527,
+    "2025-11": -1718.5884446997625,
+    "2025-12": -162.872280052746,
+    "2026-01": -1106.5371795012795
+  },
+  "channel_metrics": {
+    "KriptoTest": {
+      "total_trades": 8,
+      "winning_trades": 2,
+      "losing_trades": 6,
+      "win_rate": 25.0,
+      "total_pnl": -472.132466870198,
+      "avg_pnl_per_trade": -59.01655835877475,
+      "profit_factor": 0.3533011396848664,
+      "best_trade": 129.85786039593103,
+      "worst_trade": -268.56396797170123
+    },
+    "KR\u0130PTO KAMPI - \u00dcCRETS\u0130Z \u0130\u015eLEM\"": {
+      "total_trades": 52,
+      "winning_trades": 1,
+      "losing_trades": 51,
+      "win_rate": 1.9230769230769231,
+      "total_pnl": -5975.245608743117,
+      "avg_pnl_per_trade": -114.90856939890611,
+      "profit_factor": 0.002064495698436234,
+      "best_trade": 12.361388890541384,
+      "worst_trade": -293.8319250053596
+    },
+    "Kripto Delisi | V\u0130P \ud83d\udcb0": {
+      "total_trades": 3,
+      "winning_trades": 0,
+      "losing_trades": 3,
+      "win_rate": 0.0,
+      "total_pnl": -0.15615615615615364,
+      "avg_pnl_per_trade": -0.05205205205205121,
+      "profit_factor": 0.0,
+      "best_trade": -0.05205205205205105,
+      "worst_trade": -0.052052052052051385
+    }
+  }
+}

@@ -20,9 +20,6 @@ numpy>=1.26.4
 # Data Validation
 pydantic==2.12.0
 
-# AI/LLM Integration
-openai>=1.12.0
-
 # Async HTTP for notifications
 aiohttp>=3.9.0
 
@@ -31,6 +28,9 @@ rich==13.7.1
 
 # Web API
 flask==3.0.0
+
+# Visualization
+matplotlib>=3.7.0
 
 # Email (built-in, no extra packages needed)
 # smtplib, email.mime (standard library)
